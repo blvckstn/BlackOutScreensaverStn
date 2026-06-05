@@ -9,6 +9,11 @@
 
 Works on **single, dual, and triple-screen setups** — each monitor gets its own dedicated black window, no gaps, no taskbar peek-through, no timing mismatches.
 
+
+![BOSS screenshot](https://github.com/user-attachments/assets/8d3f5953-ebab-458b-aa0c-f50af46a0d55)
+
+
+
 > **[Русская версия](#boss--blackout-screensaver-ru)** ниже / below
 
 ---
