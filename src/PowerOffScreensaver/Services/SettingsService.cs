@@ -44,12 +44,16 @@ public class SettingsService : ISettingsService
                 ? (langElem.GetString() ?? "en")
                 : "en";
 
+            var initialized = root.TryGetProperty("initialized", out var initElem)
+                && initElem.GetBoolean();
+
             return new AppSettings
             {
                 LockOnExit = lockOnExit,
                 DdcCiEnabled = ddcCiEnabled,
                 PowerOffDelayMs = powerOffDelayMs,
-                Language = language
+                Language = language,
+                Initialized = initialized
             };
         }
         catch

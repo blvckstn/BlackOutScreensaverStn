@@ -8,6 +8,7 @@ public record AppSettings
     public bool DdcCiEnabled { get; init; } = false;
     public int PowerOffDelayMs { get; init; } = 500;
     public string Language { get; init; } = "en";
+    public bool Initialized { get; init; } = false;
 
     public static AppSettings CreateDefaults()
     {

@@ -17,6 +17,7 @@ public class SettingsForm : Form
     private Label _delayLabel = null!;
     private Label _versionLabel = null!;
     private Button _testButton = null!;
+    private Button _checkButton = null!;
     private Button _okButton = null!;
     private Button _cancelButton = null!;
     private ComboBox _langCombo = null!;
@@ -36,12 +37,12 @@ public class SettingsForm : Form
     private static string AppVersion()
     {
         var ver = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version;
-        return ver != null ? $"v{ver.Major}.{ver.Minor}" : "v1.1";
+        return ver != null ? $"v{ver.Major}.{ver.Minor}" : "v1.3";
     }
 
     private void InitializeUI()
     {
-        ClientSize = new Size(480, 248);
+        ClientSize = new Size(500, 248);
         StartPosition = FormStartPosition.CenterScreen;
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MaximizeBox = false;
@@ -58,7 +59,7 @@ public class SettingsForm : Form
 
         _langCombo = new ComboBox
         {
-            Left = 50, Top = 16, Width = 170,
+            Left = 50, Top = 16, Width = 180,
             DropDownStyle = ComboBoxStyle.DropDownList
         };
         foreach (var code in LangOrder)
@@ -72,11 +73,11 @@ public class SettingsForm : Form
 
         // ── Checkboxes ───────────────────────────────────────────
         _lockCheckBox = new CheckBox
-            { Left = 20, Top = 58, Width = 440, Height = 22, AutoSize = false };
+            { Left = 20, Top = 58, Width = 460, Height = 22, AutoSize = false };
         Controls.Add(_lockCheckBox);
 
         _ddcCiCheckBox = new CheckBox
-            { Left = 20, Top = 84, Width = 440, Height = 22, AutoSize = false };
+            { Left = 20, Top = 84, Width = 460, Height = 22, AutoSize = false };
         Controls.Add(_ddcCiCheckBox);
 
         // ── Separator 2 ─────────────────────────────────────────
@@ -85,11 +86,11 @@ public class SettingsForm : Form
         // ── Delay row ────────────────────────────────────────────
         _delayLabel = new Label
         {
-            Left = 20, Top = 121, Width = 290, Height = 22,
+            Left = 20, Top = 121, Width = 308, Height = 22,
             TextAlign = ContentAlignment.MiddleLeft
         };
         _delaySpinner = new NumericUpDown
-            { Left = 320, Top = 120, Width = 140, Minimum = 0, Maximum = 5000, Value = 500 };
+            { Left = 338, Top = 120, Width = 140, Minimum = 0, Maximum = 5000, Value = 500 };
         Controls.Add(_delayLabel);
         Controls.Add(_delaySpinner);
 
@@ -99,7 +100,7 @@ public class SettingsForm : Form
         // ── Version label ────────────────────────────────────────
         _versionLabel = new Label
         {
-            Left = 20, Top = 165, Width = 440, Height = 16,
+            Left = 20, Top = 165, Width = 460, Height = 16,
             ForeColor = SystemColors.GrayText,
             Font = new Font(Font.FontFamily, 7.5f)
         };
@@ -107,13 +108,22 @@ public class SettingsForm : Form
 
         // ── Buttons ──────────────────────────────────────────────
         _testButton = new Button
-            { Left = 20, Top = 188, Width = 120, Height = 34, UseVisualStyleBackColor = true };
+            { Left = 15, Top = 188, Width = 104, Height = 34, UseVisualStyleBackColor = true };
         _testButton.Click += (_, _) => LaunchScreensaver();
         Controls.Add(_testButton);
 
+        _checkButton = new Button
+            { Left = 126, Top = 188, Width = 126, Height = 34, UseVisualStyleBackColor = true };
+        _checkButton.Click += (_, _) =>
+        {
+            using var diag = new DiagnosticsForm(firstRun: false);
+            diag.ShowDialog(this);
+        };
+        Controls.Add(_checkButton);
+
         _okButton = new Button
         {
-            Left = 248, Top = 188, Width = 96, Height = 34,
+            Left = 268, Top = 188, Width = 96, Height = 34,
             DialogResult = DialogResult.OK,
             UseVisualStyleBackColor = true
         };
@@ -121,7 +131,7 @@ public class SettingsForm : Form
         Controls.Add(_okButton);
 
         _cancelButton = new Button
-            { Left = 360, Top = 188, Width = 96, Height = 34, UseVisualStyleBackColor = true };
+            { Left = 372, Top = 188, Width = 110, Height = 34, UseVisualStyleBackColor = true };
         _cancelButton.Click += (_, _) => Close();
         Controls.Add(_cancelButton);
 
@@ -132,7 +142,7 @@ public class SettingsForm : Form
     }
 
     private static Label MakeSep(int top) =>
-        new() { Left = 0, Top = top, Width = 480, Height = 1, BorderStyle = BorderStyle.Fixed3D };
+        new() { Left = 0, Top = top, Width = 500, Height = 1, BorderStyle = BorderStyle.Fixed3D };
 
     private void ApplyLocalization()
     {
@@ -143,6 +153,7 @@ public class SettingsForm : Form
         _delayLabel.Text = s.DelayMs;
         _versionLabel.Text = $"{s.VersionPrefix} {AppVersion()}";
         _testButton.Text = s.TestBtn;
+        _checkButton.Text = s.CheckBtn;
         _okButton.Text = s.OkBtn;
         _cancelButton.Text = s.CancelBtn;
 
@@ -179,7 +190,8 @@ public class SettingsForm : Form
             LockOnExit = _lockCheckBox.Checked,
             DdcCiEnabled = _ddcCiCheckBox.Checked,
             PowerOffDelayMs = (int)_delaySpinner.Value,
-            Language = Strings.Current
+            Language = Strings.Current,
+            Initialized = _settings.Initialized
         };
         _settingsService.Save(_settings);
         Close();
