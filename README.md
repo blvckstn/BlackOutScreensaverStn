@@ -7,18 +7,21 @@
 
 **BOSS** (**B**lack**o**ut **S**creensaver **STN**) is a Windows screensaver that covers all connected monitors with fullscreen black windows, sends a power-off command to the displays, and locks the workstation when you move the mouse or press a key.
 
+Works correctly on **single, dual, and triple-screen setups** — each monitor gets its own dedicated black window, so there are no gaps, no taskbar peek-through, and no timing mismatches between displays.
+
 > **[Русская версия](#boss--blackout-screensaver-stn-ru)** ниже / below
 
 ---
 
 ## Features
 
-- Covers **all monitors simultaneously** — no gaps, no taskbar flicker
-- Sends `WM_SYSCOMMAND SC_MONITORPOWER` to power off displays
+- **Triple / dual / single monitor** support — one dedicated black window per display, no gaps
+- Sends `WM_SYSCOMMAND SC_MONITORPOWER` to power off displays via OS
 - Exits on **any mouse movement** (5 px dead zone) or **keypress**
-- Locks the workstation on exit via `LockWorkStation()`
+- **Locks the workstation** on exit (configurable in settings)
 - Full screensaver protocol: `/s` run · `/c` settings · `/p` preview
-- Settings dialog: lock on exit toggle, DDC/CI toggle, power-off delay
+- **9-language UI** — EN DE FR ES IT PT PL UK RU, switchable with flag picker
+- Optional DDC/CI hardware power-off for compatible monitors
 - No administrator rights required
 - Single self-contained `.exe` / `.scr` — no installer, no dependencies
 
@@ -124,16 +127,19 @@ src/PowerOffScreensaver/
 
 **BOSS** (**B**lack**o**ut **S**creensaver **STN**) — хранитель экрана для Windows, который закрывает все подключённые мониторы чёрными окнами на весь экран, отправляет команду выключения питания дисплеев и блокирует рабочую станцию при первом движении мыши или нажатии клавиши.
 
+Корректно работает на **одном, двух и трёх мониторах** (triple-screen) — каждый монитор получает своё отдельное чёрное окно без зазоров и рассинхрона.
+
 ---
 
 ## Возможности
 
-- Закрывает **все мониторы одновременно** — без зазоров и мерцания панели задач
-- Отправляет `WM_SYSCOMMAND SC_MONITORPOWER` для выключения мониторов
+- Поддержка **triple / dual / single монитор** — отдельное чёрное окно на каждый дисплей
+- Отправляет `WM_SYSCOMMAND SC_MONITORPOWER` для выключения мониторов через ОС
 - Выход при любом **движении мыши** (мёртвая зона 5 пикселей) или **нажатии клавиши**
-- Блокирует рабочую станцию при выходе через `LockWorkStation()`
+- **Блокирует рабочую станцию** при выходе (настраивается)
 - Полный протокол хранителя экрана: `/s` запуск · `/c` настройки · `/p` превью
-- Диалог настроек: блокировка при выходе, DDC/CI, задержка перед выключением
+- **9 языков интерфейса** — RU EN DE FR ES IT PT PL UK, переключатель с флагами
+- Опциональное аппаратное выключение DDC/CI для совместимых мониторов
 - Не требует прав администратора
 - Один самодостаточный `.exe` / `.scr` — без установщика и зависимостей
 
