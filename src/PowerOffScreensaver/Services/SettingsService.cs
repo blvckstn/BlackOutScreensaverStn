@@ -40,11 +40,16 @@ public class SettingsService : ISettingsService
                 ? delayElem.GetInt32()
                 : 500;
 
+            var language = root.TryGetProperty("language", out var langElem)
+                ? (langElem.GetString() ?? "en")
+                : "en";
+
             return new AppSettings
             {
                 LockOnExit = lockOnExit,
                 DdcCiEnabled = ddcCiEnabled,
-                PowerOffDelayMs = powerOffDelayMs
+                PowerOffDelayMs = powerOffDelayMs,
+                Language = language
             };
         }
         catch

@@ -7,6 +7,7 @@ public record AppSettings
     public bool LockOnExit { get; init; } = true;
     public bool DdcCiEnabled { get; init; } = false;
     public int PowerOffDelayMs { get; init; } = 500;
+    public string Language { get; init; } = "en";
 
     public static AppSettings CreateDefaults()
     {
