@@ -1,15 +1,15 @@
-# BOSS — Blackout Screensaver STN
+# BOSS — Blackout ScreenSaver
 
 ![Platform](https://img.shields.io/badge/platform-Windows%2010%2F11-0078D4?logo=windows)
 ![.NET](https://img.shields.io/badge/.NET-10.0-512BD4?logo=dotnet)
 ![Architecture](https://img.shields.io/badge/arch-x64-lightgrey)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
-**BOSS** (**B**lack**o**ut **S**creensaver **STN**) is a Windows screensaver that forces all connected monitors to go black and power off — including the second and third display that NVIDIA and AMD drivers stubbornly refuse to turn off on their own.
+**BOSS** (**B**lack**o**ut **S**creen**S**aver) is a Windows screensaver that forces all connected monitors to go black and power off — including the second and third display that NVIDIA and AMD drivers stubbornly refuse to turn off on their own.
 
 Works on **single, dual, and triple-screen setups** — each monitor gets its own dedicated black window, no gaps, no taskbar peek-through, no timing mismatches.
 
-> **[Русская версия](#boss--blackout-screensaver-stn-ru)** ниже / below
+> **[Русская версия](#boss--blackout-screensaver-ru)** ниже / below
 
 ---
 
@@ -161,12 +161,12 @@ src/PowerOffScreensaver/
 
 ---
 
-# BOSS — Blackout Screensaver STN <sup>RU</sup>
+# BOSS — Blackout ScreenSaver <sup>RU</sup>
 
 ![Platform](https://img.shields.io/badge/платформа-Windows%2010%2F11-0078D4?logo=windows)
 ![.NET](https://img.shields.io/badge/.NET-10.0-512BD4?logo=dotnet)
 
-**BOSS** (**B**lack**o**ut **S**creensaver **STN**) — хранитель экрана для Windows, который принудительно закрывает все подключённые мониторы чёрными окнами и отправляет команду выключения питания дисплеев — включая второй и третий экран, которые NVIDIA и AMD упрямо отказываются выключать штатными средствами.
+**BOSS** (**B**lack**o**ut **S**creen**S**aver) — хранитель экрана для Windows, который принудительно закрывает все подключённые мониторы чёрными окнами и отправляет команду выключения питания дисплеев — включая второй и третий экран, которые NVIDIA и AMD упрямо отказываются выключать штатными средствами.
 
 Корректно работает на **одном, двух и трёх мониторах** — каждый монитор получает своё отдельное чёрное окно без зазоров и рассинхрона.
 
