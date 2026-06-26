@@ -2,15 +2,18 @@ using System.Drawing;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
 using PowerOffScreensaver.Localization;
+using PowerOffScreensaver.Services;
 
 namespace PowerOffScreensaver;
 
 public sealed class DiagnosticsForm : Form
 {
     private readonly bool _firstRun;
+    private readonly IInstallerService _installer = new InstallerService();
 
     private Panel _resultsPanel = null!;
     private Label _summaryLabel = null!;
+    private Button _installButton = null!;
     private Button? _runButton;
     private Button _closeButton = null!;
 
@@ -33,7 +36,7 @@ public sealed class DiagnosticsForm : Form
     {
         var s = Strings.Get();
         Text = s.DiagTitle;
-        ClientSize = new Size(520, 340);
+        ClientSize = new Size(520, 404);
         StartPosition = FormStartPosition.CenterScreen;
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MaximizeBox = false;
@@ -49,8 +52,8 @@ public sealed class DiagnosticsForm : Form
         Controls.Add(new Label
         {
             Text = _firstRun
-                ? "First-run check — making sure BOSS can work on this system."
-                : "Verifying that BOSS can work correctly on this system.",
+                ? "First-run check — making sure Blackout ScreenSaver can work on this system."
+                : "Verifying that Blackout ScreenSaver can work correctly on this system.",
             Left = 20, Top = 46, Width = 480, Height = 17,
             ForeColor = SystemColors.GrayText,
             Font = new Font(Font.FontFamily, 8.5f)
@@ -60,28 +63,38 @@ public sealed class DiagnosticsForm : Form
 
         _resultsPanel = new Panel
         {
-            Left = 0, Top = 71, Width = 520, Height = 192,
+            Left = 0, Top = 71, Width = 520, Height = 248,
             BackColor = Color.White
         };
         Controls.Add(_resultsPanel);
 
-        Controls.Add(MakeSep(263));
+        Controls.Add(MakeSep(323));
 
         _summaryLabel = new Label
         {
-            Left = 20, Top = 272, Width = 340, Height = 22,
+            Left = 20, Top = 330, Width = 480, Height = 22,
             Font = new Font(Font.FontFamily, 9f, FontStyle.Bold),
             TextAlign = ContentAlignment.MiddleLeft,
+            AutoEllipsis = true,
             Text = "Checking..."
         };
         Controls.Add(_summaryLabel);
+
+        _installButton = new Button
+        {
+            Text = s.InstallBtn,
+            Left = 20, Top = 360, Width = 200, Height = 34,
+            UseVisualStyleBackColor = true
+        };
+        _installButton.Click += (_, _) => DoInstall();
+        Controls.Add(_installButton);
 
         if (_firstRun)
         {
             _runButton = new Button
             {
                 Text = s.DiagRunNow,
-                Left = 256, Top = 298, Width = 140, Height = 34,
+                Left = 296, Top = 360, Width = 116, Height = 34,
                 Enabled = false,
                 UseVisualStyleBackColor = true
             };
@@ -91,7 +104,7 @@ public sealed class DiagnosticsForm : Form
 
         _closeButton = new Button
         {
-            Left = 404, Top = 298, Width = 96, Height = 34,
+            Left = 416, Top = 360, Width = 84, Height = 34,
             Text = s.DiagClose,
             UseVisualStyleBackColor = true
         };
@@ -104,9 +117,11 @@ public sealed class DiagnosticsForm : Form
 
     private void RunChecks()
     {
-        var checks = GatherChecks();
-        AllPassed = checks.TrueForAll(c => c.Passed);
-        RenderChecks(checks);
+        var core = GatherCoreChecks();
+        AllPassed = core.TrueForAll(c => c.Passed);
+
+        var rows = new List<CheckResult>(core) { GatherInstallCheck() };
+        RenderChecks(rows);
 
         var s = Strings.Get();
         if (AllPassed)
@@ -122,7 +137,35 @@ public sealed class DiagnosticsForm : Form
         }
     }
 
-    private static List<CheckResult> GatherChecks()
+    private void DoInstall()
+    {
+        var s = Strings.Get();
+        _installButton.Enabled = false;
+        Application.DoEvents();
+
+        var result = _installer.Install();
+
+        // Refresh the rendered rows so the Installation line reflects the new state.
+        var rows = new List<CheckResult>(GatherCoreChecks()) { GatherInstallCheck() };
+        RenderChecks(rows);
+
+        if (result.Succeeded)
+        {
+            var msg = string.Format(s.InstallDoneFmt, result.CurrentVersion);
+            if (result.RemovedOldCount > 0)
+                msg += " " + string.Format(s.InstallRemovedFmt, result.RemovedOldCount);
+            _summaryLabel.Text = msg;
+            _summaryLabel.ForeColor = Color.FromArgb(0, 140, 60);
+        }
+        else
+        {
+            _summaryLabel.Text = string.Format(s.InstallFailedFmt, result.Error ?? "");
+            _summaryLabel.ForeColor = Color.FromArgb(180, 30, 30);
+        }
+        _installButton.Enabled = true;
+    }
+
+    private static List<CheckResult> GatherCoreChecks()
     {
         var list = new List<CheckResult>();
 
@@ -167,6 +210,17 @@ public sealed class DiagnosticsForm : Form
         ));
 
         return list;
+    }
+
+    private CheckResult GatherInstallCheck()
+    {
+        var s = Strings.Get();
+        var st = _installer.GetStatus();
+        bool ok = st.Installed && st.IsCurrentVersion && st.IsActiveScreensaver;
+        string detail = st.Installed
+            ? string.Format(s.StatusInstalledFmt, st.InstalledVersion ?? st.CurrentVersion)
+            : s.StatusNotInstalled;
+        return new CheckResult(s.InstallCheckName, ok, detail);
     }
 
     private static bool IsApiAvailable(string dll, string func)

@@ -62,7 +62,7 @@ You don't need to change drivers, edit your power plan, or run as administrator.
 - Full screensaver protocol: `/s` run, `/c` settings, `/p` preview
 - 9-language interface (RU EN DE FR ES IT PT PL ZH) with a flag picker
 - Optional DDC/CI hardware power-off for compatible monitors
-- No administrator rights required
+- One-click per-user install that sets BOSS as your active screensaver, verifies the version, and removes old copies, all without administrator rights
 - A single self-contained `.exe` / `.scr` with no installer and no dependencies
 
 ---
@@ -98,10 +98,15 @@ dotnet test
 
 ## Install as a screensaver
 
-1. Run `.\publish.ps1`, or download the `.scr` from Releases. The build output lands in `publish\`.
-2. Right-click `publish\PowerOffScreensaver.scr` and choose **Install**. You can also copy it to `C:\Windows\System32\` from an elevated PowerShell.
-3. Open **Settings → Personalization → Lock screen → Screen saver settings**.
-4. Pick **PowerOffScreensaver** from the drop-down and click **OK**.
+The easiest way needs no administrator rights:
+
+1. Download the `.scr` from Releases (or run `.\publish.ps1`) and run it.
+2. On first launch BOSS runs a quick system check, then offers **Install into Windows**. Click it.
+3. That copies BOSS to your user profile as `Blackout ScreenSaver`, sets it as the active Windows screensaver, verifies the installed version, and removes any older copies.
+
+The installer writes only to your own user account (`HKCU` and `%LocalAppData%`), so Windows never asks for elevation. You'll see it as **Blackout ScreenSaver** in the Windows screen saver list.
+
+Prefer to do it by hand? Right-click `PowerOffScreensaver.scr`, choose **Install**, or copy it to `C:\Windows\System32\` from an elevated PowerShell, then pick it under **Settings → Personalization → Lock screen → Screen saver settings**.
 
 ---
 
@@ -179,6 +184,7 @@ src/PowerOffScreensaver/
     ├── WorkstationLockService.cs LockWorkStation() + rundll32 fallback
     ├── DesktopLockProbe.cs       Lock-state verification (OpenInputDesktop)
     ├── GlobalInputHook.cs        System-wide low-level mouse + keyboard hooks
+    ├── InstallerService.cs       Per-user install/verify/cleanup (no admin)
     ├── SettingsService.cs        JSON load / save
     └── NullDdcCiService.cs       DDC/CI stub (default)
 ```
@@ -242,7 +248,7 @@ BOSS не ждёт, пока Windows скоординирует выключен
 - Полный протокол хранителя экрана: `/s` запуск, `/c` настройки, `/p` превью
 - 9 языков интерфейса (RU EN DE FR ES IT PT PL ZH) с переключателем-флажком
 - Опциональное аппаратное выключение DDC/CI для совместимых мониторов
-- Не требует прав администратора
+- Установка в один клик для пользователя: назначает BOSS активной заставкой, проверяет версию и удаляет старые копии — без прав администратора
 - Один самодостаточный `.exe` / `.scr` без установщика и зависимостей
 
 ---
@@ -278,10 +284,15 @@ dotnet test
 
 ## Установка хранителя экрана
 
-1. Запустите `.\publish.ps1` или скачайте `.scr` из релизов. Файлы появятся в папке `publish\`.
-2. Правый клик на `publish\PowerOffScreensaver.scr` и **Установить**. Можно также скопировать в `C:\Windows\System32\` из PowerShell с правами администратора.
-3. Откройте **Параметры → Персонализация → Экран блокировки → Параметры заставки**.
-4. Выберите **PowerOffScreensaver** из списка и нажмите **ОК**.
+Самый простой способ не требует прав администратора:
+
+1. Скачайте `.scr` из релизов (или запустите `.\publish.ps1`) и запустите файл.
+2. При первом запуске BOSS делает быструю проверку системы и предлагает **Установить в Windows**. Нажмите кнопку.
+3. BOSS скопирует себя в профиль пользователя как `Blackout ScreenSaver`, назначит активной заставкой Windows, проверит установленную версию и удалит старые копии.
+
+Установщик пишет только в ваш профиль (`HKCU` и `%LocalAppData%`), поэтому Windows не запрашивает повышение прав. В списке заставок Windows программа будет называться **Blackout ScreenSaver**.
+
+Предпочитаете вручную? Правый клик на `PowerOffScreensaver.scr` → **Установить**, либо скопируйте в `C:\Windows\System32\` из PowerShell с правами администратора, затем выберите её в **Параметры → Персонализация → Экран блокировки → Параметры заставки**.
 
 ---
 

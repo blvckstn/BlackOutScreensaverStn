@@ -23,9 +23,11 @@ static class Program
                     using var diagForm = new DiagnosticsForm(firstRun: true);
                     Application.Run(diagForm);
 
+                    // Onboarding has been shown — don't prompt again next launch.
+                    svc.Save(settings with { Initialized = true });
+
                     if (diagForm.ShouldRunScreensaver)
                     {
-                        svc.Save(settings with { Initialized = true });
                         var exe = System.Diagnostics.Process.GetCurrentProcess().MainModule?.FileName;
                         if (exe != null)
                             System.Diagnostics.Process.Start(exe, "/s");

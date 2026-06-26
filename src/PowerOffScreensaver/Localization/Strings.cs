@@ -20,7 +20,15 @@ public record LangStrings(
     string DiagClose,
     string LockOnExitHint,
     string DelayHint,
-    string DdcCiHint
+    string DdcCiHint,
+    string InstallBtn,
+    string InstallOffer,
+    string InstallDoneFmt,
+    string InstallRemovedFmt,
+    string InstallFailedFmt,
+    string InstallCheckName,
+    string StatusInstalledFmt,
+    string StatusNotInstalled
 );
 
 public static class Strings
@@ -53,7 +61,15 @@ public static class Strings
                 "Close",
                 "When the screensaver is dismissed, lock Windows so a password is required to return.",
                 "How long the screen stays black before the monitors are powered off.",
-                "Experimental: ask monitors to power off via DDC/CI. Leave off if unsure."
+                "Experimental: ask monitors to power off via DDC/CI. Leave off if unsure.",
+                "Install into Windows",
+                "Set Blackout ScreenSaver as your active Windows screensaver?",
+                "Installed v{0} as your active screensaver.",
+                "Removed {0} old version(s).",
+                "Install failed: {0}",
+                "Installation",
+                "v{0} installed and active",
+                "Not installed"
             ),
             ["ru"] = new(
                 "🇷🇺", "Русский",
@@ -70,7 +86,15 @@ public static class Strings
                 "Закрыть",
                 "При выходе из заставки блокирует Windows — для возврата потребуется пароль.",
                 "Сколько экран остаётся чёрным до отключения мониторов.",
-                "Эксперимент: выключение мониторов через DDC/CI. Оставьте выключенным, если не уверены."
+                "Эксперимент: выключение мониторов через DDC/CI. Оставьте выключенным, если не уверены.",
+                "Установить в Windows",
+                "Сделать Blackout ScreenSaver активной заставкой Windows?",
+                "Установлена версия v{0} как активная заставка.",
+                "Удалено старых версий: {0}.",
+                "Ошибка установки: {0}",
+                "Установка",
+                "v{0} установлена и активна",
+                "Не установлена"
             ),
             ["de"] = new(
                 "🇩🇪", "Deutsch",
@@ -87,7 +111,15 @@ public static class Strings
                 "Schließen",
                 "Sperrt Windows beim Beenden des Bildschirmschoners; zur Rückkehr ist ein Passwort nötig.",
                 "Wie lange der Bildschirm schwarz bleibt, bevor die Monitore abgeschaltet werden.",
-                "Experimentell: Monitore per DDC/CI abschalten. Im Zweifel deaktiviert lassen."
+                "Experimentell: Monitore per DDC/CI abschalten. Im Zweifel deaktiviert lassen.",
+                "In Windows installieren",
+                "Blackout ScreenSaver als aktiven Windows-Bildschirmschoner festlegen?",
+                "Version v{0} als aktiver Bildschirmschoner installiert.",
+                "{0} alte Version(en) entfernt.",
+                "Installation fehlgeschlagen: {0}",
+                "Installation",
+                "v{0} installiert und aktiv",
+                "Nicht installiert"
             ),
             ["fr"] = new(
                 "🇫🇷", "Français",
@@ -104,7 +136,15 @@ public static class Strings
                 "Fermer",
                 "À la sortie de l'écran de veille, verrouille Windows ; un mot de passe sera requis.",
                 "Durée pendant laquelle l'écran reste noir avant l'extinction des moniteurs.",
-                "Expérimental : éteindre les moniteurs via DDC/CI. Laissez désactivé en cas de doute."
+                "Expérimental : éteindre les moniteurs via DDC/CI. Laissez désactivé en cas de doute.",
+                "Installer dans Windows",
+                "Définir Blackout ScreenSaver comme écran de veille actif de Windows ?",
+                "Version v{0} installée comme écran de veille actif.",
+                "{0} ancienne(s) version(s) supprimée(s).",
+                "Échec de l'installation : {0}",
+                "Installation",
+                "v{0} installé et actif",
+                "Non installé"
             ),
             ["es"] = new(
                 "🇪🇸", "Español",
@@ -121,7 +161,15 @@ public static class Strings
                 "Cerrar",
                 "Al salir del salvapantallas, bloquea Windows; se pedirá contraseña para volver.",
                 "Cuánto tiempo la pantalla permanece en negro antes de apagar los monitores.",
-                "Experimental: apagar monitores mediante DDC/CI. Déjelo desactivado si no está seguro."
+                "Experimental: apagar monitores mediante DDC/CI. Déjelo desactivado si no está seguro.",
+                "Instalar en Windows",
+                "¿Establecer Blackout ScreenSaver como salvapantallas activo de Windows?",
+                "Versión v{0} instalada como salvapantallas activo.",
+                "Se eliminaron {0} versión(es) antigua(s).",
+                "Error de instalación: {0}",
+                "Instalación",
+                "v{0} instalado y activo",
+                "No instalado"
             ),
             ["it"] = new(
                 "🇮🇹", "Italiano",
@@ -138,7 +186,15 @@ public static class Strings
                 "Chiudi",
                 "All'uscita dal salvaschermo blocca Windows; per tornare sarà richiesta la password.",
                 "Per quanto tempo lo schermo resta nero prima di spegnere i monitor.",
-                "Sperimentale: spegnere i monitor tramite DDC/CI. Lascia disattivato in caso di dubbio."
+                "Sperimentale: spegnere i monitor tramite DDC/CI. Lascia disattivato in caso di dubbio.",
+                "Installa in Windows",
+                "Impostare Blackout ScreenSaver come salvaschermo attivo di Windows?",
+                "Versione v{0} installata come salvaschermo attivo.",
+                "Rimosse {0} vecchia/e versione/i.",
+                "Installazione non riuscita: {0}",
+                "Installazione",
+                "v{0} installato e attivo",
+                "Non installato"
             ),
             ["pt"] = new(
                 "🇵🇹", "Português",
@@ -155,7 +211,15 @@ public static class Strings
                 "Fechar",
                 "Ao sair da proteção de tela, bloqueia o Windows; será pedida senha para voltar.",
                 "Quanto tempo a tela fica preta antes de os monitores serem desligados.",
-                "Experimental: desligar monitores via DDC/CI. Deixe desativado se não tiver certeza."
+                "Experimental: desligar monitores via DDC/CI. Deixe desativado se não tiver certeza.",
+                "Instalar no Windows",
+                "Definir Blackout ScreenSaver como proteção de tela ativa do Windows?",
+                "Versão v{0} instalada como proteção de tela ativa.",
+                "{0} versão(ões) antiga(s) removida(s).",
+                "Falha na instalação: {0}",
+                "Instalação",
+                "v{0} instalada e ativa",
+                "Não instalada"
             ),
             ["pl"] = new(
                 "🇵🇱", "Polski",
@@ -172,7 +236,15 @@ public static class Strings
                 "Zamknij",
                 "Po zamknięciu wygaszacza blokuje Windows; do powrotu wymagane będzie hasło.",
                 "Jak długo ekran pozostaje czarny, zanim monitory zostaną wyłączone.",
-                "Eksperymentalne: wyłączanie monitorów przez DDC/CI. W razie wątpliwości pozostaw wyłączone."
+                "Eksperymentalne: wyłączanie monitorów przez DDC/CI. W razie wątpliwości pozostaw wyłączone.",
+                "Zainstaluj w Windows",
+                "Ustawić Blackout ScreenSaver jako aktywny wygaszacz ekranu Windows?",
+                "Zainstalowano wersję v{0} jako aktywny wygaszacz.",
+                "Usunięto starych wersji: {0}.",
+                "Instalacja nie powiodła się: {0}",
+                "Instalacja",
+                "v{0} zainstalowana i aktywna",
+                "Nie zainstalowano"
             ),
             ["zh"] = new(
                 "🇨🇳", "中文",
@@ -189,7 +261,15 @@ public static class Strings
                 "关闭",
                 "退出屏保时锁定 Windows，返回时需要输入密码。",
                 "在关闭显示器之前，屏幕保持黑色的时长。",
-                "实验性：通过 DDC/CI 关闭显示器。如不确定请保持关闭。"
+                "实验性：通过 DDC/CI 关闭显示器。如不确定请保持关闭。",
+                "安装到 Windows",
+                "将 Blackout ScreenSaver 设为 Windows 当前屏幕保护程序？",
+                "已安装 v{0} 并设为当前屏幕保护程序。",
+                "已移除 {0} 个旧版本。",
+                "安装失败：{0}",
+                "安装",
+                "v{0} 已安装并启用",
+                "未安装"
             ),
         };
 }
