@@ -13,6 +13,15 @@
     <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
     <Version>1.4</Version>
     <AssemblyVersion>1.4.0.0</AssemblyVersion>
+    <FileVersion>1.4.0.0</FileVersion>
+    <Product>Blackout ScreenSaver</Product>
+    <AssemblyTitle>Blackout ScreenSaver</AssemblyTitle>
+    <Description>Blackout ScreenSaver (BOSS) — multi-monitor blackout and power-off screensaver with guaranteed lock.</Description>
+    <Company>blvckstn</Company>
   </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="PowerOffScreensaver.Tests" />
+  </ItemGroup>
 
 </Project>

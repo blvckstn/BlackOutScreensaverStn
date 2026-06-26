@@ -42,9 +42,23 @@ src/PowerOffScreensaver/
     ├── WorkstationLockService.cs LockWorkStation() + rundll32 fallback
     ├── DesktopLockProbe.cs       OpenInputDesktop lock-state verification
     ├── GlobalInputHook.cs        WH_MOUSE_LL + WH_KEYBOARD_LL system-wide input
+    ├── InstallerService.cs       per-user install/verify/cleanup (HKCU + %LocalAppData%)
     ├── SettingsService.cs        JSON %AppData%\PowerOffScreensaver\settings.json
     └── NullDdcCiService.cs       DDC/CI stub (default)
 ```
+
+## Установка в систему (feature 003)
+Имя в системе: **Blackout ScreenSaver** (csproj Product/Title/Description; имя в
+списке заставок Windows = имя файла `Blackout ScreenSaver.scr`).
+Механизм без UAC (`InstallerService`):
+- копирует текущий exe в `%LocalAppData%\Blackout ScreenSaver\Blackout ScreenSaver.scr`
+- пишет `HKCU\Control Panel\Desktop`: SCRNSAVE.EXE, ScreenSaveActive=1, ScreenSaverIsSecure=1, ScreenSaveTimeOut(=300 если не задан)
+- `SystemParametersInfo(SPI_SETSCREENSAVEACTIVE/TIMEOUT)` — применить сразу
+- удаляет старые версии (legacy папки PowerOffScreensaver/BOSS, чужие .scr/.exe в install dir, System32 best-effort)
+- `GetStatus()` проверяет: установлено / актуальная версия (FileVersion) / активная заставка
+Первый запуск (`/s` + !Initialized) → DiagnosticsForm с кнопкой «Install into Windows»
+после проверки системы. Program.cs ставит Initialized=true после онбординга.
+Чистые хелперы (`StaleArtifacts`, `VersionsMatch`, `PathsEqual`) покрыты тестами.
 
 ## Гарантированная блокировка при выходе (feature 002, см. specs/002)
 Многослойный последовательный алгоритм — ЛЮБОй ввод гарантированно гасит заставку и блокирует ПК:
@@ -84,7 +98,7 @@ src/PowerOffScreensaver/
 4. Приватный бранч `private` — для AI снапшотов
 
 ## Тесты
-xUnit 2.9.2 на net10.0-windows, 108 тестов, `dotnet test`
+xUnit 2.9.2 на net10.0-windows, 127 тестов, `dotnet test`
 
 ## Команды
 ```powershell
