@@ -3,8 +3,12 @@ bin/
 obj/
 publish/
 
-# Claude Code
+# Claude Code / AI context — keep out of public main-clean
 .claude/
+.autoclaude/
+.specify/
+specs/
+CLAUDE.md
 
 # Temp / junk
 1

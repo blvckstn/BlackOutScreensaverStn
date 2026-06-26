@@ -22,8 +22,10 @@ public class SettingsForm : Form
     private Button _cancelButton = null!;
     private ComboBox _langCombo = null!;
 
+    private readonly ToolTip _toolTip = new() { AutoPopDelay = 15000, InitialDelay = 350, ReshowDelay = 100 };
+
     private static readonly string[] LangOrder =
-        ["en", "ru", "de", "fr", "es", "it", "pt", "pl", "uk"];
+        ["en", "ru", "de", "fr", "es", "it", "pt", "pl", "zh"];
 
     public SettingsForm()
     {
@@ -37,7 +39,7 @@ public class SettingsForm : Form
     private static string AppVersion()
     {
         var ver = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version;
-        return ver != null ? $"v{ver.Major}.{ver.Minor}" : "v1.3";
+        return ver != null ? $"v{ver.Major}.{ver.Minor}" : "v1.4";
     }
 
     private void InitializeUI()
@@ -156,6 +158,12 @@ public class SettingsForm : Form
         _checkButton.Text = s.CheckBtn;
         _okButton.Text = s.OkBtn;
         _cancelButton.Text = s.CancelBtn;
+
+        // Inline help so the dialog is self-explanatory in every language.
+        _toolTip.SetToolTip(_lockCheckBox, s.LockOnExitHint);
+        _toolTip.SetToolTip(_ddcCiCheckBox, s.DdcCiHint);
+        _toolTip.SetToolTip(_delayLabel, s.DelayHint);
+        _toolTip.SetToolTip(_delaySpinner, s.DelayHint);
 
         var idx = Array.IndexOf(LangOrder, Strings.Current);
         if (idx >= 0 && _langCombo.SelectedIndex != idx)
