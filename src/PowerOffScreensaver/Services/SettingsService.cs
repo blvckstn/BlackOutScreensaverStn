@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace PowerOffScreensaver.Services;
 
@@ -40,6 +41,8 @@ public class SettingsService : ISettingsService
                 ? delayElem.GetInt32()
                 : 500;
 
+            var powerOffMode = ParsePowerOffMode(root, ddcCiEnabled);
+
             var language = root.TryGetProperty("language", out var langElem)
                 ? (langElem.GetString() ?? "en")
                 : "en";
@@ -51,6 +54,7 @@ public class SettingsService : ISettingsService
             {
                 LockOnExit = lockOnExit,
                 DdcCiEnabled = ddcCiEnabled,
+                PowerOffMode = powerOffMode,
                 PowerOffDelayMs = powerOffDelayMs,
                 Language = language,
                 Initialized = initialized
@@ -60,6 +64,24 @@ public class SettingsService : ISettingsService
         {
             return AppSettings.CreateDefaults();
         }
+    }
+
+    /// <summary>
+    /// Reads <c>powerOffMode</c> (string or int). Falls back to the legacy
+    /// <c>ddcCiEnabled</c> flag (true → Both) when the mode is absent.
+    /// </summary>
+    internal static PowerOffMode ParsePowerOffMode(JsonElement root, bool legacyDdcCiEnabled)
+    {
+        if (root.TryGetProperty("powerOffMode", out var modeElem))
+        {
+            if (modeElem.ValueKind == JsonValueKind.String &&
+                Enum.TryParse<PowerOffMode>(modeElem.GetString(), ignoreCase: true, out var m))
+                return m;
+            if (modeElem.ValueKind == JsonValueKind.Number &&
+                Enum.IsDefined(typeof(PowerOffMode), modeElem.GetInt32()))
+                return (PowerOffMode)modeElem.GetInt32();
+        }
+        return legacyDdcCiEnabled ? PowerOffMode.Both : PowerOffMode.Auto;
     }
 
     public void Save(AppSettings settings)
@@ -75,7 +97,8 @@ public class SettingsService : ISettingsService
             var options = new JsonSerializerOptions
             {
                 WriteIndented = true,
-                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) }
             };
             var json = JsonSerializer.Serialize(settings, options);
             File.WriteAllText(_settingsPath, json);

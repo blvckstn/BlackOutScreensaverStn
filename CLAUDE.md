@@ -27,7 +27,8 @@ GitHub: https://github.com/blvckstn/BlackOutScreensaverStn
 src/PowerOffScreensaver/
 ├── Program.cs                    /s /c /p entry point
 ├── ScreensaverArgs.cs            arg parser
-├── AppSettings.cs                settings record (LockOnExit, DdcCiEnabled, PowerOffDelayMs, Language)
+├── AppSettings.cs                settings record (LockOnExit, PowerOffMode, PowerOffDelayMs, Language)
+├── PowerPlan.cs                  pure: which power method(s) per mode+DDC support (Layer)
 ├── InputGate.cs                  dead-zone decision for raw input (pure, Layer 1)
 ├── LockGuard.cs                  lock attempt→verify→retry→fallback FSM (pure, Layers 3-5)
 ├── Localization/
@@ -38,14 +39,31 @@ src/PowerOffScreensaver/
 │   ├── BlackoutForm.cs           fullscreen black window per monitor, dead zone 5px
 │   └── SettingsForm.cs           settings dialog with language switcher + tooltips
 └── Services/                     ALL Win32 P/Invoke here only
-    ├── MonitorPowerService.cs    WM_SYSCOMMAND SC_MONITORPOWER (off + on/wake)
+    ├── MonitorPowerController.cs orchestrates DDC/CI + DPMS by PowerOffMode
+    ├── MonitorPowerService.cs    WM_SYSCOMMAND SC_MONITORPOWER (off + on/wake, DPMS)
+    ├── DdcCiService.cs           dxva2 per-monitor power (VESA MCCS VCP 0xD6) + probe/verify
     ├── WorkstationLockService.cs LockWorkStation() + rundll32 fallback
     ├── DesktopLockProbe.cs       OpenInputDesktop lock-state verification
     ├── GlobalInputHook.cs        WH_MOUSE_LL + WH_KEYBOARD_LL system-wide input
     ├── InstallerService.cs       per-user install/verify/cleanup (HKCU + %LocalAppData%)
-    ├── SettingsService.cs        JSON %AppData%\PowerOffScreensaver\settings.json
-    └── NullDdcCiService.cs       DDC/CI stub (default)
+    └── SettingsService.cs        JSON %AppData%\PowerOffScreensaver\settings.json
 ```
+
+## Надёжное отключение 3 мониторов (feature 004, см. specs/004)
+DPMS (`SC_MONITORPOWER`) — глобальный запрос, NVIDIA/AMD применяют его только к
+части экранов (обычно основному) → боковые мониторы горят. Решение — адресовать
+каждый монитор напрямую по **DDC/CI (VESA MCCS, VCP 0xD6)** через `dxva2.dll`.
+- `PowerOffMode`: Auto (по умолч.) · DdcCi · Dpms · Both. Auto = DDC/CI на каждый
+  монитор + DPMS для тех, кто DDC/CI не поддерживает. Чистая логика — `PowerPlan`.
+- `DdcCiService`: `EnumDisplayMonitors`→`GetPhysicalMonitorsFromHMONITOR`,
+  `SetVCPFeature(0xD6, 4=off/1=on)`, `GetVCPFeatureAndVCPFeatureReply` для проверки.
+- Пробуждение ВСЕГДА включает каждый монитор (DDC/CI on + DPMS on): панель,
+  выключенная по DDC/CI, сама от ввода не включается. Плюс `ProcessExit`-хэндлер
+  восстанавливает мониторы при любом выходе.
+- Тест в настройках (`MonitorTestForm`): выключает→ждёт→читает состояние по
+  DDC/CI→включает, показывает per-monitor «погас/горит/неизвестно» + выбор метода.
+- Headless `/install` (Program) ставит заставку из CLI + `initialized=true`,
+  пишет `%LocalAppData%\Blackout ScreenSaver\install.log`.
 
 ## Установка в систему (feature 003)
 Имя в системе: **Blackout ScreenSaver** (csproj Product/Title/Description; имя в
@@ -86,7 +104,7 @@ src/PowerOffScreensaver/
 Сохранение языка: `AppSettings.Language` → `settings.json`
 
 ## Версионирование
-- Текущая: **1.4**
+- Текущая: **1.5**
 - Файл: `src/PowerOffScreensaver/PowerOffScreensaver.csproj` → `<Version>X.Y</Version>`
 - Автоотображение в заголовке окна настроек
 - Инкрементировать на 0.1 при каждом значимом изменении
@@ -98,7 +116,7 @@ src/PowerOffScreensaver/
 4. Приватный бранч `private` — для AI снапшотов
 
 ## Тесты
-xUnit 2.9.2 на net10.0-windows, 127 тестов, `dotnet test`
+xUnit 2.9.2 на net10.0-windows, 153 теста, `dotnet test`
 
 ## Команды
 ```powershell
@@ -108,6 +126,6 @@ dotnet test                             # тесты
 ```
 
 ## Бэклог
-- [ ] DDC/CI реализация (Phase 6)
+- [x] DDC/CI реализация (feature 004) — per-monitor VCP 0xD6 + тест в настройках
 - [ ] GitHub Actions CI
 - [ ] Release workflow с тегами

@@ -10,9 +10,13 @@ public class SettingsForm : Form
 {
     private readonly ISettingsService _settingsService;
     private AppSettings _settings;
+    private readonly MonitorPowerController _powerController =
+        new(new MonitorPowerService(), new DdcCiService());
 
     private CheckBox _lockCheckBox = null!;
-    private CheckBox _ddcCiCheckBox = null!;
+    private Label _methodLabel = null!;
+    private ComboBox _modeCombo = null!;
+    private Button _testMonitorsButton = null!;
     private NumericUpDown _delaySpinner = null!;
     private Label _delayLabel = null!;
     private Label _versionLabel = null!;
@@ -27,6 +31,9 @@ public class SettingsForm : Form
     private static readonly string[] LangOrder =
         ["en", "ru", "de", "fr", "es", "it", "pt", "pl", "zh"];
 
+    private static readonly PowerOffMode[] ModeOrder =
+        { PowerOffMode.Auto, PowerOffMode.DdcCi, PowerOffMode.Dpms, PowerOffMode.Both };
+
     public SettingsForm()
     {
         _settingsService = new Services.SettingsService();
@@ -39,12 +46,12 @@ public class SettingsForm : Form
     private static string AppVersion()
     {
         var ver = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version;
-        return ver != null ? $"v{ver.Major}.{ver.Minor}" : "v1.4";
+        return ver != null ? $"v{ver.Major}.{ver.Minor}" : "v1.5";
     }
 
     private void InitializeUI()
     {
-        ClientSize = new Size(500, 248);
+        ClientSize = new Size(500, 300);
         StartPosition = FormStartPosition.CenterScreen;
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MaximizeBox = false;
@@ -70,39 +77,55 @@ public class SettingsForm : Form
         _langCombo.SelectedIndexChanged += OnLangChanged;
         Controls.Add(_langCombo);
 
-        // ── Separator 1 ─────────────────────────────────────────
         Controls.Add(MakeSep(50));
 
-        // ── Checkboxes ───────────────────────────────────────────
+        // ── Lock checkbox ────────────────────────────────────────
         _lockCheckBox = new CheckBox
             { Left = 20, Top = 58, Width = 460, Height = 22, AutoSize = false };
         Controls.Add(_lockCheckBox);
 
-        _ddcCiCheckBox = new CheckBox
-            { Left = 20, Top = 84, Width = 460, Height = 22, AutoSize = false };
-        Controls.Add(_ddcCiCheckBox);
+        // ── Monitor power-off method row ─────────────────────────
+        _methodLabel = new Label
+        {
+            Left = 20, Top = 90, Width = 180, Height = 24,
+            TextAlign = ContentAlignment.MiddleLeft
+        };
+        Controls.Add(_methodLabel);
 
-        // ── Separator 2 ─────────────────────────────────────────
-        Controls.Add(MakeSep(114));
+        _modeCombo = new ComboBox
+        {
+            Left = 176, Top = 88, Width = 170,
+            DropDownStyle = ComboBoxStyle.DropDownList
+        };
+        Controls.Add(_modeCombo);
+
+        _testMonitorsButton = new Button
+        {
+            Left = 352, Top = 87, Width = 128, Height = 26,
+            UseVisualStyleBackColor = true
+        };
+        _testMonitorsButton.Click += (_, _) => OpenMonitorTest();
+        Controls.Add(_testMonitorsButton);
+
+        Controls.Add(MakeSep(122));
 
         // ── Delay row ────────────────────────────────────────────
         _delayLabel = new Label
         {
-            Left = 20, Top = 121, Width = 308, Height = 22,
+            Left = 20, Top = 130, Width = 308, Height = 22,
             TextAlign = ContentAlignment.MiddleLeft
         };
         _delaySpinner = new NumericUpDown
-            { Left = 338, Top = 120, Width = 140, Minimum = 0, Maximum = 5000, Value = 500 };
+            { Left = 338, Top = 129, Width = 140, Minimum = 0, Maximum = 5000, Value = 500 };
         Controls.Add(_delayLabel);
         Controls.Add(_delaySpinner);
 
-        // ── Separator 3 ─────────────────────────────────────────
-        Controls.Add(MakeSep(157));
+        Controls.Add(MakeSep(165));
 
         // ── Version label ────────────────────────────────────────
         _versionLabel = new Label
         {
-            Left = 20, Top = 165, Width = 460, Height = 16,
+            Left = 20, Top = 173, Width = 460, Height = 16,
             ForeColor = SystemColors.GrayText,
             Font = new Font(Font.FontFamily, 7.5f)
         };
@@ -110,12 +133,12 @@ public class SettingsForm : Form
 
         // ── Buttons ──────────────────────────────────────────────
         _testButton = new Button
-            { Left = 15, Top = 188, Width = 104, Height = 34, UseVisualStyleBackColor = true };
+            { Left = 15, Top = 200, Width = 104, Height = 34, UseVisualStyleBackColor = true };
         _testButton.Click += (_, _) => LaunchScreensaver();
         Controls.Add(_testButton);
 
         _checkButton = new Button
-            { Left = 126, Top = 188, Width = 126, Height = 34, UseVisualStyleBackColor = true };
+            { Left = 126, Top = 200, Width = 126, Height = 34, UseVisualStyleBackColor = true };
         _checkButton.Click += (_, _) =>
         {
             using var diag = new DiagnosticsForm(firstRun: false);
@@ -125,7 +148,7 @@ public class SettingsForm : Form
 
         _okButton = new Button
         {
-            Left = 268, Top = 188, Width = 96, Height = 34,
+            Left = 268, Top = 200, Width = 96, Height = 34,
             DialogResult = DialogResult.OK,
             UseVisualStyleBackColor = true
         };
@@ -133,7 +156,7 @@ public class SettingsForm : Form
         Controls.Add(_okButton);
 
         _cancelButton = new Button
-            { Left = 372, Top = 188, Width = 110, Height = 34, UseVisualStyleBackColor = true };
+            { Left = 372, Top = 200, Width = 110, Height = 34, UseVisualStyleBackColor = true };
         _cancelButton.Click += (_, _) => Close();
         Controls.Add(_cancelButton);
 
@@ -151,17 +174,24 @@ public class SettingsForm : Form
         var s = Strings.Get();
         Text = string.Format(s.WindowTitle, AppVersion());
         _lockCheckBox.Text = s.LockOnExit;
-        _ddcCiCheckBox.Text = s.DdcCi;
+        _methodLabel.Text = s.PowerMethodLabel;
         _delayLabel.Text = s.DelayMs;
         _versionLabel.Text = $"{s.VersionPrefix} {AppVersion()}";
         _testButton.Text = s.TestBtn;
         _checkButton.Text = s.CheckBtn;
+        _testMonitorsButton.Text = s.TestMonitorsBtn;
         _okButton.Text = s.OkBtn;
         _cancelButton.Text = s.CancelBtn;
 
-        // Inline help so the dialog is self-explanatory in every language.
+        // Rebuild the mode combo in the current language, preserving the selection.
+        var keepMode = CurrentMode();
+        _modeCombo.Items.Clear();
+        _modeCombo.Items.AddRange(new object[] { s.ModeAuto, s.ModeDdcCi, s.ModeDpms, s.ModeBoth });
+        _modeCombo.SelectedIndex = Math.Max(0, Array.IndexOf(ModeOrder, keepMode));
+
         _toolTip.SetToolTip(_lockCheckBox, s.LockOnExitHint);
-        _toolTip.SetToolTip(_ddcCiCheckBox, s.DdcCiHint);
+        _toolTip.SetToolTip(_methodLabel, s.TestHint);
+        _toolTip.SetToolTip(_modeCombo, s.TestHint);
         _toolTip.SetToolTip(_delayLabel, s.DelayHint);
         _toolTip.SetToolTip(_delaySpinner, s.DelayHint);
 
@@ -174,10 +204,19 @@ public class SettingsForm : Form
         }
     }
 
+    private PowerOffMode CurrentMode()
+    {
+        var i = _modeCombo.SelectedIndex;
+        return (i >= 0 && i < ModeOrder.Length) ? ModeOrder[i] : PowerOffMode.Auto;
+    }
+
+    private void SetModeCombo(PowerOffMode mode) =>
+        _modeCombo.SelectedIndex = Math.Max(0, Array.IndexOf(ModeOrder, mode));
+
     private void LoadSettings()
     {
         _lockCheckBox.Checked = _settings.LockOnExit;
-        _ddcCiCheckBox.Checked = _settings.DdcCiEnabled;
+        SetModeCombo(_settings.PowerOffMode);
         _delaySpinner.Value = Math.Clamp(_settings.PowerOffDelayMs, 0, 5000);
     }
 
@@ -191,12 +230,21 @@ public class SettingsForm : Form
         }
     }
 
+    private void OpenMonitorTest()
+    {
+        using var f = new MonitorTestForm(_powerController, CurrentMode());
+        f.ShowDialog(this);
+        SetModeCombo(f.SelectedMode); // reflect a method change made while testing
+    }
+
     private void SaveSettings()
     {
+        var mode = CurrentMode();
         _settings = new AppSettings
         {
             LockOnExit = _lockCheckBox.Checked,
-            DdcCiEnabled = _ddcCiCheckBox.Checked,
+            DdcCiEnabled = mode is PowerOffMode.DdcCi or PowerOffMode.Both, // legacy mirror
+            PowerOffMode = mode,
             PowerOffDelayMs = (int)_delaySpinner.Value,
             Language = Strings.Current,
             Initialized = _settings.Initialized

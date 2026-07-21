@@ -46,8 +46,8 @@ AMD users hit similar problems on multi-monitor setups, usually milder, and most
 BOSS doesn't wait for Windows to coordinate monitor power. It acts directly:
 
 1. It covers every screen at once with a dedicated fullscreen black window per monitor. That gives you burn-in protection and a real blackout no matter what the driver does.
-2. It broadcasts `WM_SYSCOMMAND SC_MONITORPOWER` as a system-wide message instead of a per-window hint, which gets past driver-level suppression in most cases.
-3. When you return, it wakes the displays, locks Windows, and verifies the lock actually took effect before it exits, so you are never left at an unlocked desktop.
+2. It powers off each monitor individually over DDC/CI (the VESA MCCS "power mode" command), talking straight to the panel instead of asking the GPU driver. That is what makes the second and third monitor actually go dark when a plain DPMS broadcast leaves them lit. Monitors that don't speak DDC/CI still get the DPMS broadcast as a fallback, and Auto mode figures out which is which.
+3. When you return, it wakes every monitor (a DDC/CI-off panel won't come back on its own), locks Windows, and verifies the lock actually took effect before it exits, so you are never left at an unlocked desktop or a dark side monitor.
 
 You don't need to change drivers, edit your power plan, or run as administrator. It's one `.scr` file: drop it in and go.
 
@@ -56,12 +56,12 @@ You don't need to change drivers, edit your power plan, or run as administrator.
 ## Features
 
 - Triple, dual, or single monitor, with one dedicated black window per display and no gaps
-- Broadcasts `WM_SYSCOMMAND SC_MONITORPOWER` to power off displays
+- Reliable per-monitor power-off over DDC/CI (VESA MCCS, VCP 0xD6) so the second and third monitor actually go dark, with the `WM_SYSCOMMAND SC_MONITORPOWER` DPMS broadcast as a fallback
+- Auto-detects each monitor's DDC/CI support and picks the method; a built-in **monitor test** shows which screens really turned off
 - Exits on any mouse movement (5 px dead zone) or any keypress
 - Guaranteed lock on wake: global mouse and keyboard hooks catch input regardless of window focus, the display is woken so the lock screen is visible, and the lock is verified with a retry and a fallback
 - Full screensaver protocol: `/s` run, `/c` settings, `/p` preview
 - 9-language interface (RU EN DE FR ES IT PT PL ZH) with a flag picker
-- Optional DDC/CI hardware power-off for compatible monitors
 - One-click per-user install that sets BOSS as your active screensaver, verifies the version, and removes old copies, all without administrator rights
 - A single self-contained `.exe` / `.scr` with no installer and no dependencies
 
@@ -127,8 +127,10 @@ Open the settings dialog with `/c`. Every option has an inline tooltip in your c
 | Setting | Default | Description |
 |---|---|---|
 | Lock workstation on exit | On | Locks Windows when the screensaver exits, then confirms the lock took effect |
-| Try DDC/CI power off | Off | Hardware monitor power-off via DDC/CI (experimental) |
+| Monitor power-off method | Auto | Auto (DDC/CI per monitor + DPMS for the rest), DDC/CI only, DPMS only, or Both |
 | Power-off delay (ms) | 500 | Pause before sending the monitor power-off command |
+
+Use **Test monitors…** to turn each screen off for a few seconds and see which ones actually go dark. If a monitor stays lit, switch the method to **Both** or enable DDC/CI in that monitor's on-screen menu.
 
 Settings live in `%AppData%\PowerOffScreensaver\settings.json`.
 
@@ -180,13 +182,14 @@ src/PowerOffScreensaver/
 ├── Localization/
 │   └── Strings.cs                Static localization — RU EN DE FR ES IT PT PL ZH
 └── Services/                     All Win32 P/Invoke lives here only
-    ├── MonitorPowerService.cs    SC_MONITORPOWER off + on/wake
+    ├── MonitorPowerController.cs Orchestrates DDC/CI + DPMS by chosen mode
+    ├── MonitorPowerService.cs    SC_MONITORPOWER off + on/wake (DPMS)
+    ├── DdcCiService.cs           Per-monitor power via dxva2 (VESA MCCS VCP 0xD6)
     ├── WorkstationLockService.cs LockWorkStation() + rundll32 fallback
     ├── DesktopLockProbe.cs       Lock-state verification (OpenInputDesktop)
     ├── GlobalInputHook.cs        System-wide low-level mouse + keyboard hooks
     ├── InstallerService.cs       Per-user install/verify/cleanup (no admin)
-    ├── SettingsService.cs        JSON load / save
-    └── NullDdcCiService.cs       DDC/CI stub (default)
+    └── SettingsService.cs        JSON load / save
 ```
 
 ---
@@ -232,8 +235,8 @@ NVIDIA GeForce Experience и его фоновый сервис NVIDIA LocalSyst
 BOSS не ждёт, пока Windows скоординирует выключение мониторов. Он действует напрямую:
 
 1. Сразу закрывает все экраны отдельными полноэкранными чёрными окнами. Это даёт защиту от выгорания и настоящее затемнение независимо от поведения драйвера.
-2. Рассылает `WM_SYSCOMMAND SC_MONITORPOWER` как системное широковещательное сообщение, а не подсказку конкретному окну, что обходит драйверную блокировку в большинстве случаев.
-3. При возврате будит дисплеи, блокирует Windows и проверяет, что блокировка действительно сработала, прежде чем завершиться, так что вы не останетесь у разблокированного рабочего стола.
+2. Выключает каждый монитор по отдельности через DDC/CI (команда «power mode» из VESA MCCS), обращаясь напрямую к панели, а не к драйверу видеокарты. Именно это гасит второй и третий монитор там, где обычной DPMS-рассылки не хватает. Мониторы без DDC/CI получают DPMS-рассылку как запасной вариант, а режим «Авто» сам определяет, кому что.
+3. При возврате будит каждый монитор (панель, выключенная по DDC/CI, сама не включится), блокирует Windows и проверяет, что блокировка действительно сработала, прежде чем завершиться — так что вы не останетесь ни у разблокированного стола, ни с погасшим боковым монитором.
 
 Не нужно менять драйверы, править план электропитания или запускать от администратора. Это один файл `.scr`: скопировал и работает.
 
@@ -242,12 +245,12 @@ BOSS не ждёт, пока Windows скоординирует выключен
 ## Возможности
 
 - Поддержка triple / dual / single монитор, по отдельному чёрному окну на каждый дисплей, без зазоров
-- Рассылает `WM_SYSCOMMAND SC_MONITORPOWER` для выключения мониторов через ОС
+- Надёжное выключение каждого монитора по DDC/CI (VESA MCCS, VCP 0xD6) — второй и третий экран действительно гаснут, а DPMS-рассылка `WM_SYSCOMMAND SC_MONITORPOWER` работает как запасной вариант
+- Автоопределение поддержки DDC/CI у каждого монитора и выбор метода; встроенный **тест мониторов** показывает, какие экраны реально погасли
 - Выход при любом движении мыши (мёртвая зона 5 пикселей) или нажатии клавиши
 - Гарантированная блокировка при пробуждении: глобальные хуки мыши и клавиатуры ловят ввод независимо от фокуса окна, дисплей будится, чтобы экран блокировки был виден, а сама блокировка проверяется с повтором и резервным путём
 - Полный протокол хранителя экрана: `/s` запуск, `/c` настройки, `/p` превью
 - 9 языков интерфейса (RU EN DE FR ES IT PT PL ZH) с переключателем-флажком
-- Опциональное аппаратное выключение DDC/CI для совместимых мониторов
 - Установка в один клик для пользователя: назначает BOSS активной заставкой, проверяет версию и удаляет старые копии — без прав администратора
 - Один самодостаточный `.exe` / `.scr` без установщика и зависимостей
 
@@ -313,8 +316,10 @@ dotnet test
 | Параметр | По умолчанию | Описание |
 |---|---|---|
 | Блокировать рабочую станцию при выходе | Вкл | Блокирует Windows при выходе из хранителя и подтверждает, что блокировка сработала |
-| Попытаться использовать DDC/CI | Выкл | Аппаратное выключение мониторов (экспериментально) |
+| Метод отключения мониторов | Авто | Авто (DDC/CI на каждый монитор + DPMS для остальных), только DDC/CI, только DPMS или оба |
 | Задержка перед отключением (мс) | 500 | Пауза перед отправкой команды мониторам |
+
+Кнопка **Тест мониторов…** выключает каждый экран на несколько секунд, чтобы вы увидели, какие реально гаснут. Если монитор не гаснет, переключите метод на **Оба** или включите DDC/CI в экранном меню монитора.
 
 Настройки хранятся в `%AppData%\PowerOffScreensaver\settings.json`.
 

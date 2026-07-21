@@ -6,7 +6,8 @@ public enum LaunchMode
 {
     Screensaver,
     Settings,
-    Preview
+    Preview,
+    Install
 }
 
 public record ScreensaverArgs(LaunchMode Mode, IntPtr? PreviewHwnd = null)
@@ -19,6 +20,11 @@ public record ScreensaverArgs(LaunchMode Mode, IntPtr? PreviewHwnd = null)
         }
 
         string firstArg = args[0].ToLowerInvariant();
+
+        if (firstArg == "/install" || firstArg == "-install" || firstArg == "--install")
+        {
+            return new ScreensaverArgs(LaunchMode.Install);
+        }
 
         if (firstArg == "/s")
         {
