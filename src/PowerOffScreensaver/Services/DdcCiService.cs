@@ -1,0 +1,161 @@
+using System;
+using System.Collections.Generic;
+using System.Runtime.InteropServices;
+
+namespace PowerOffScreensaver.Services;
+
+/// <summary>
+/// Real DDC/CI (VESA MCCS) power control via dxva2.dll. Each physical monitor is
+/// addressed directly through VCP code 0xD6 ("Power Mode"), so power-off works
+/// per panel regardless of how the GPU driver handles global DPMS. This is what
+/// makes the second/third monitor actually turn off on NVIDIA/AMD rigs.
+/// </summary>
+public sealed class DdcCiService : IDdcCiService
+{
+    private const byte VCP_POWER = 0xD6;
+    private const uint POWER_ON = 1;   // 0x01 On
+    private const uint POWER_OFF = 4;  // 0x04 Off (DPMS off / backlight off)
+
+    private delegate bool MonitorEnumProc(IntPtr hMonitor, IntPtr hdc, IntPtr lprcMonitor, IntPtr dwData);
+
+    [DllImport("user32.dll")]
+    private static extern bool EnumDisplayMonitors(IntPtr hdc, IntPtr lprcClip, MonitorEnumProc lpfnEnum, IntPtr dwData);
+
+    [DllImport("dxva2.dll", SetLastError = true)]
+    private static extern bool GetNumberOfPhysicalMonitorsFromHMONITOR(IntPtr hMonitor, out uint pdwNumberOfPhysicalMonitors);
+
+    [DllImport("dxva2.dll", SetLastError = true)]
+    private static extern bool GetPhysicalMonitorsFromHMONITOR(IntPtr hMonitor, uint dwArraySize, [Out] PHYSICAL_MONITOR[] pPhysicalMonitorArray);
+
+    [DllImport("dxva2.dll", SetLastError = true)]
+    private static extern bool DestroyPhysicalMonitors(uint dwArraySize, [In] PHYSICAL_MONITOR[] pPhysicalMonitorArray);
+
+    [DllImport("dxva2.dll", SetLastError = true)]
+    private static extern bool SetVCPFeature(IntPtr hMonitor, byte bVCPCode, uint dwNewValue);
+
+    [DllImport("dxva2.dll", SetLastError = true)]
+    private static extern bool GetVCPFeatureAndVCPFeatureReply(
+        IntPtr hMonitor, byte bVCPCode, out uint pvct, out uint pdwCurrentValue, out uint pdwMaximumValue);
+
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+    private struct PHYSICAL_MONITOR
+    {
+        public IntPtr hPhysicalMonitor;
+        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 128)]
+        public string szPhysicalMonitorDescription;
+    }
+
+    public DdcResult PowerAll(bool on)
+    {
+        uint value = on ? POWER_ON : POWER_OFF;
+        return ForEachPhysical(pm =>
+        {
+            try { return SetVCPFeature(pm.hPhysicalMonitor, VCP_POWER, value); }
+            catch { return false; }
+        });
+    }
+
+    public IReadOnlyList<MonitorProbe> Probe()
+    {
+        var probes = new List<MonitorProbe>();
+        int index = 0;
+        ForEachPhysical(pm =>
+        {
+            bool supports;
+            DdcPowerState state = DdcPowerState.Unknown;
+            try
+            {
+                supports = GetVCPFeatureAndVCPFeatureReply(
+                    pm.hPhysicalMonitor, VCP_POWER, out _, out uint cur, out _);
+                if (supports)
+                {
+                    state = cur switch
+                    {
+                        1 => DdcPowerState.On,
+                        4 or 5 => DdcPowerState.Off,
+                        _ => DdcPowerState.Other
+                    };
+                }
+            }
+            catch { supports = false; }
+
+            probes.Add(new MonitorProbe(index++, Describe(pm.szPhysicalMonitorDescription, index), supports, state));
+            return supports;
+        });
+        return probes;
+    }
+
+    private static string Describe(string? raw, int index) =>
+        string.IsNullOrWhiteSpace(raw) ? $"Monitor {index}" : raw.Trim();
+
+    /// <summary>
+    /// Enumerates every physical monitor, runs <paramref name="action"/> on each,
+    /// and always releases the handles. Any native failure is swallowed so one bad
+    /// monitor never aborts the sweep.
+    /// </summary>
+    private DdcResult ForEachPhysical(Func<PHYSICAL_MONITOR, bool> action)
+    {
+        int total = 0, ok = 0;
+        List<IntPtr> hmonitors;
+        try
+        {
+            hmonitors = EnumerateHMonitors();
+        }
+        catch
+        {
+            return new DdcResult(0, 0);
+        }
+
+        foreach (var hmon in hmonitors)
+        {
+            PHYSICAL_MONITOR[]? arr = null;
+            uint n = 0;
+            try
+            {
+                if (!GetNumberOfPhysicalMonitorsFromHMONITOR(hmon, out n) || n == 0)
+                    continue;
+                arr = new PHYSICAL_MONITOR[n];
+                if (!GetPhysicalMonitorsFromHMONITOR(hmon, n, arr))
+                {
+                    arr = null;
+                    continue;
+                }
+
+                foreach (var pm in arr)
+                {
+                    total++;
+                    if (action(pm)) ok++;
+                }
+            }
+            catch
+            {
+                // ignore this monitor
+            }
+            finally
+            {
+                if (arr != null)
+                {
+                    try { DestroyPhysicalMonitors(n, arr); } catch { }
+                }
+            }
+        }
+
+        return new DdcResult(total, ok);
+    }
+
+    private List<IntPtr> EnumerateHMonitors()
+    {
+        var list = new List<IntPtr>();
+        MonitorEnumProc proc = (h, _, _, _) => { list.Add(h); return true; };
+        EnumDisplayMonitors(IntPtr.Zero, IntPtr.Zero, proc, IntPtr.Zero);
+        GC.KeepAlive(proc);
+        return list;
+    }
+}
+
+/// <summary>No-op DDC/CI service for environments without display hardware.</summary>
+public sealed class NullDdcCiService : IDdcCiService
+{
+    public IReadOnlyList<MonitorProbe> Probe() => Array.Empty<MonitorProbe>();
+    public DdcResult PowerAll(bool on) => new(0, 0);
+}

@@ -11,23 +11,29 @@ public class ScreensaverHost : ApplicationContext
 {
     private readonly List<BlackoutForm> _forms = new();
     private int _exiting = 0;
-    private readonly IMonitorPowerService _monitorPowerService;
+    private readonly MonitorPowerController _powerController;
     private readonly IWorkstationLockService _workstationLockService;
     private readonly ILockStateProbe _lockStateProbe;
-    private readonly IDdcCiService _ddcCiService;
     private readonly AppSettings _settings;
     private readonly GlobalInputHook _inputHook = new();
     private readonly InputGate _inputGate = new();
+    private readonly EventHandler _processExitHandler;
 
     public ScreensaverHost()
     {
         var settingsService = new Services.SettingsService();
         _settings = settingsService.Load();
 
-        _monitorPowerService = new Services.MonitorPowerService();
+        _powerController = new MonitorPowerController(
+            new Services.MonitorPowerService(),
+            new Services.DdcCiService());
         _workstationLockService = new Services.WorkstationLockService();
         _lockStateProbe = new Services.DesktopLockProbe();
-        _ddcCiService = new Services.NullDdcCiService();
+
+        // Safety net: if the process ends by any path while monitors are off,
+        // bring them back on (a DDC/CI-off panel won't wake from input by itself).
+        _processExitHandler = (_, _) => { try { _powerController.PowerOn(); } catch { } };
+        AppDomain.CurrentDomain.ProcessExit += _processExitHandler;
 
         CreateBlackoutForms();
         InstallGlobalInputHook();
@@ -62,11 +68,7 @@ public class ScreensaverHost : ApplicationContext
         var delay = _settings.PowerOffDelayMs;
         new System.Threading.Timer(_ =>
         {
-            _monitorPowerService.TryPowerOff();
-            if (_ddcCiService.IsSupported && _settings.DdcCiEnabled)
-            {
-                _ddcCiService.TryPowerOff();
-            }
+            _powerController.PowerOff(_settings.PowerOffMode);
         }, null, delay, System.Threading.Timeout.Infinite);
     }
 
@@ -78,11 +80,12 @@ public class ScreensaverHost : ApplicationContext
         // Stop receiving further input as we tear down.
         _inputHook.Dispose();
 
+        // Always restore the displays first — including any panel we forced off
+        // over DDC/CI — so the desktop / lock screen is actually visible.
+        _powerController.PowerOn();
+
         if (_settings.LockOnExit)
         {
-            // Layer 2: wake the display so the lock screen is actually visible.
-            _monitorPowerService.TryPowerOn();
-
             // Layers 3-5: lock while the black forms still cover the screen,
             // verify it took effect, retry, then fall back before giving up.
             var guard = new LockGuard(
@@ -106,6 +109,8 @@ public class ScreensaverHost : ApplicationContext
         if (disposing)
         {
             _inputHook.Dispose();
+            try { _powerController.PowerOn(); } catch { }
+            AppDomain.CurrentDomain.ProcessExit -= _processExitHandler;
         }
         foreach (var form in _forms)
         {

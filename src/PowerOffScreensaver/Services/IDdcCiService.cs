@@ -1,7 +1,31 @@
+using System.Collections.Generic;
+
 namespace PowerOffScreensaver.Services;
 
+/// <summary>Power state reported by a monitor over DDC/CI (VCP 0xD6).</summary>
+public enum DdcPowerState
+{
+    Unknown,
+    On,
+    Off,
+    Other
+}
+
+/// <summary>One physical monitor as seen over DDC/CI.</summary>
+public sealed record MonitorProbe(int Index, string Description, bool SupportsPower, DdcPowerState State);
+
+/// <summary>Outcome of a bulk power command.</summary>
+public sealed record DdcResult(int Total, int Succeeded)
+{
+    public bool AnySucceeded => Succeeded > 0;
+}
+
+/// <summary>Per-monitor hardware power control over the DDC/CI channel.</summary>
 public interface IDdcCiService
 {
-    bool IsSupported { get; }
-    void TryPowerOff();
+    /// <summary>Enumerate physical monitors with DDC/CI support and current power state.</summary>
+    IReadOnlyList<MonitorProbe> Probe();
+
+    /// <summary>Set power on (true) or off (false) on every physical monitor.</summary>
+    DdcResult PowerAll(bool on);
 }
