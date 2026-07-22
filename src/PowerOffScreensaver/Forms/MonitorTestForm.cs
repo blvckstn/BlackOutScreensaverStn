@@ -31,6 +31,7 @@ public sealed class MonitorTestForm : Form
     private IReadOnlyList<MonitorInfo> _inventory = Array.Empty<MonitorInfo>();
 
     private ComboBox _modeCombo = null!;
+    private CheckBox _logCheckBox = null!;
     private ListView _list = null!;
     private Label _phaseLabel = null!;
     private Label _countLabel = null!;
@@ -75,21 +76,28 @@ public sealed class MonitorTestForm : Form
             Font = new Font(Font.FontFamily, 8.5f)
         });
 
-        // ── Method selector (choose what to test with) ───────────
+        // ── Method selector (choose what to test with) + log toggle ─
         Controls.Add(new Label
         {
             Text = s.PowerMethodLabel,
-            Left = 20, Top = 60, Width = 180, Height = 24,
+            Left = 20, Top = 60, Width = 130, Height = 24,
             TextAlign = ContentAlignment.MiddleLeft
         });
         _modeCombo = new ComboBox
         {
-            Left = 206, Top = 57, Width = 300, DropDownStyle = ComboBoxStyle.DropDownList
+            Left = 150, Top = 57, Width = 290, DropDownStyle = ComboBoxStyle.DropDownList
         };
         _modeCombo.Items.AddRange(new object[] { s.ModeDpms, s.ModeAuto, s.ModeDdcCi, s.ModeBoth, s.ModeNone });
         _modeCombo.SelectedIndex = Math.Max(0, Array.IndexOf(ModeOrder, initialMode));
         _modeCombo.SelectedIndexChanged += (_, _) => SelectedMode = CurrentMode();
         Controls.Add(_modeCombo);
+
+        _logCheckBox = new CheckBox
+        {
+            Text = s.TestLogLabel, Left = 452, Top = 60, Width = 148, Height = 22,
+            AutoSize = false
+        };
+        Controls.Add(_logCheckBox);
 
         // ── Monitor list ─────────────────────────────────────────
         _list = new ListView
@@ -189,6 +197,7 @@ public sealed class MonitorTestForm : Form
         SetBusy(true);
         var s = Strings.Get();
 
+        Log($"===== Test run: mode={CurrentMode()}, monitors={_inventory.Count} =====");
         try
         {
             for (int i = 0; i < _inventory.Count; i++)
@@ -197,11 +206,13 @@ public sealed class MonitorTestForm : Form
                 string number = (i + 1).ToString();
                 string header = string.Format(s.TestMonitorHeaderFmt, number, _inventory.Count);
                 var mode = _perMonitor.TryGetValue(i, out var m0) ? m0 : CurrentMode();
+                Log($"Monitor {number}: desc='{info.Description}' bounds={info.Bounds.Width}x{info.Bounds.Height}@{info.Bounds.X},{info.Bounds.Y} ddc={info.SupportsDdc}");
 
                 bool done = false;
                 while (!done)
                 {
                     HighlightRow(i);
+                    Log($"Monitor {number}: testing with mode={mode}");
 
                     // 5-second warning ON the target monitor + on this dialog.
                     using (var prompt = new MonitorTestPrompt(info.Bounds))
@@ -216,20 +227,29 @@ public sealed class MonitorTestForm : Form
                         prompt.Close();
                     }
 
-                    // Power this monitor off, keep it dark for the countdown.
-                    await Task.Run(() => _controller.PowerOffOne(i, mode));
+                    // Power this monitor off (timed: a slow/stuck DDC call can't freeze the test).
+                    await TimedRun($"Monitor {number} PowerOffOne({mode})", () => _controller.PowerOffOne(i, mode), 5000);
+
+                    if (_logCheckBox.Checked)
+                    {
+                        var st = await TimedRun($"Monitor {number} ProbeOne after off",
+                            () => _controller.ProbeOne(i)?.State ?? DdcPowerState.Unknown, 4000, DdcPowerState.Unknown);
+                        Log($"Monitor {number}: DDC state after off = {st}");
+                    }
+
                     for (int c = DarkSeconds; c >= 1; c--)
                     {
                         ShowPhase(header, string.Format(s.TestWakeInFmt, c), SystemColors.GrayText);
                         await Task.Delay(1000);
                     }
 
-                    // Wake everything back, then ask about this monitor.
-                    await Task.Run(() => _controller.Wake(mode));
+                    // Quick single-pass wake (no long verify loop) so the questions ALWAYS appear.
+                    await TimedRun($"Monitor {number} PowerOn (wake)", () => _controller.PowerOn(), 6000);
                     ShowPhase(header, s.TestWokeMsg, Color.FromArgb(0, 140, 60));
 
                     using var dlg = new MonitorTestResultDialog(header, mode);
                     dlg.ShowDialog(this);
+                    Log($"Monitor {number}: answered slept={dlg.SleptOk} woke={dlg.WokeOk} decision={dlg.Decision} nextMode={dlg.SelectedMode}");
 
                     if (dlg.Decision == TestDecision.Retry)
                     {
@@ -247,17 +267,61 @@ public sealed class MonitorTestForm : Form
             PerMonitorResult = new Dictionary<int, PowerOffMode>(_perMonitor);
             SelectedMode = MostCommonMode() ?? SelectedMode;
             ShowPhase("", "✓", Color.FromArgb(0, 140, 60));
+            Log("===== Test run finished =====");
         }
         catch (Exception ex)
         {
+            Log($"ERROR: {ex}");
             ShowPhase("", ex.Message, Color.FromArgb(180, 30, 30));
-            try { await Task.Run(() => _controller.Wake(CurrentMode())); } catch { }
+            try { await Task.Run(() => _controller.PowerOn()); } catch { }
         }
         finally
         {
             _running = false;
             SetBusy(false);
         }
+    }
+
+    // Runs a possibly-blocking native op on a background thread with a timeout, logging its
+    // duration. If it exceeds the timeout the wizard continues (the call keeps running in the
+    // background), so a slow/stuck DDC monitor can never freeze the test.
+    private Task TimedRun(string name, Action op, int timeoutMs) =>
+        TimedRun<object?>(name, () => { op(); return null; }, timeoutMs, null);
+
+    private async Task<T> TimedRun<T>(string name, Func<T> op, int timeoutMs, T onTimeout)
+    {
+        Log($"{name}: start");
+        long t0 = Environment.TickCount64;
+        var task = Task.Run(op);
+        var finished = await Task.WhenAny(task, Task.Delay(timeoutMs));
+        if (finished == task)
+        {
+            try
+            {
+                var r = await task;
+                Log($"{name}: done in {Environment.TickCount64 - t0} ms -> {r}");
+                return r;
+            }
+            catch (Exception ex)
+            {
+                Log($"{name}: ERROR after {Environment.TickCount64 - t0} ms -> {ex.Message}");
+                return onTimeout;
+            }
+        }
+        Log($"{name}: TIMEOUT after {timeoutMs} ms (continuing; native call still running)");
+        return onTimeout;
+    }
+
+    private void Log(string line)
+    {
+        if (_logCheckBox == null || !_logCheckBox.Checked) return;
+        try
+        {
+            System.IO.Directory.CreateDirectory(InstallerService.InstallDir);
+            var path = System.IO.Path.Combine(InstallerService.InstallDir, "test.log");
+            System.IO.File.AppendAllText(path, $"[{DateTime.Now:HH:mm:ss.fff}] {line}{Environment.NewLine}");
+        }
+        catch { }
     }
 
     private void ShowPhase(string phase, string big, Color bigColor)
