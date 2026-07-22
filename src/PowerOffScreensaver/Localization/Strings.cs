@@ -44,7 +44,9 @@ public record LangStrings(
     string ResultOff,
     string ResultOn,
     string ResultUnknown,
-    string TestHint
+    string TestHint,
+    string ModeNone,
+    string TestConfirmQuestion
 );
 
 public static class Strings
@@ -101,7 +103,9 @@ public static class Strings
                 "Turned off",
                 "Stayed on",
                 "Unknown",
-                "If a monitor stays on, pick 'Both', or enable DDC/CI in that monitor's on-screen menu."
+                "If a monitor stays on, pick 'Both', or enable DDC/CI in that monitor's on-screen menu.",
+                "Black screen only (no power-off)",
+                "Did it work correctly? Did every monitor go dark and then come back on?"
             ),
             ["ru"] = new(
                 "🇷🇺", "Русский",
@@ -142,7 +146,9 @@ public static class Strings
                 "Погас",
                 "Остался включён",
                 "Неизвестно",
-                "Если монитор не гаснет, выберите «Оба» или включите DDC/CI в экранном меню этого монитора."
+                "Если монитор не гаснет, выберите «Оба» или включите DDC/CI в экранном меню этого монитора.",
+                "Только чёрный экран (без выключения)",
+                "Всё отработало правильно? Каждый монитор погас, а затем снова включился?"
             ),
             ["de"] = new(
                 "🇩🇪", "Deutsch",
@@ -183,7 +189,9 @@ public static class Strings
                 "Ausgeschaltet",
                 "Blieb an",
                 "Unbekannt",
-                "Bleibt ein Monitor an, wählen Sie „Beide“ oder aktivieren Sie DDC/CI im Bildschirmmenü des Monitors."
+                "Bleibt ein Monitor an, wählen Sie „Beide“ oder aktivieren Sie DDC/CI im Bildschirmmenü des Monitors.",
+                "Nur schwarzer Bildschirm (kein Abschalten)",
+                "Hat alles korrekt funktioniert? Wurde jeder Monitor dunkel und ging dann wieder an?"
             ),
             ["fr"] = new(
                 "🇫🇷", "Français",
@@ -224,7 +232,9 @@ public static class Strings
                 "Éteint",
                 "Resté allumé",
                 "Inconnu",
-                "Si un moniteur reste allumé, choisissez « Les deux » ou activez le DDC/CI dans le menu du moniteur."
+                "Si un moniteur reste allumé, choisissez « Les deux » ou activez le DDC/CI dans le menu du moniteur.",
+                "Écran noir seulement (sans extinction)",
+                "Tout a bien fonctionné ? Chaque moniteur s'est-il éteint puis rallumé ?"
             ),
             ["es"] = new(
                 "🇪🇸", "Español",
@@ -265,7 +275,9 @@ public static class Strings
                 "Apagado",
                 "Siguió encendido",
                 "Desconocido",
-                "Si un monitor sigue encendido, elija «Ambos» o active DDC/CI en el menú del monitor."
+                "Si un monitor sigue encendido, elija «Ambos» o active DDC/CI en el menú del monitor.",
+                "Solo pantalla negra (sin apagado)",
+                "¿Funcionó todo bien? ¿Cada monitor se apagó y luego volvió a encenderse?"
             ),
             ["it"] = new(
                 "🇮🇹", "Italiano",
@@ -306,7 +318,9 @@ public static class Strings
                 "Spento",
                 "Rimasto acceso",
                 "Sconosciuto",
-                "Se un monitor resta acceso, scegli «Entrambi» o abilita il DDC/CI nel menu del monitor."
+                "Se un monitor resta acceso, scegli «Entrambi» o abilita il DDC/CI nel menu del monitor.",
+                "Solo schermo nero (senza spegnimento)",
+                "Ha funzionato tutto correttamente? Ogni monitor si è spento e poi riacceso?"
             ),
             ["pt"] = new(
                 "🇵🇹", "Português",
@@ -347,7 +361,9 @@ public static class Strings
                 "Desligou",
                 "Continuou ligado",
                 "Desconhecido",
-                "Se um monitor continuar ligado, escolha «Ambos» ou ative o DDC/CI no menu do monitor."
+                "Se um monitor continuar ligado, escolha «Ambos» ou ative o DDC/CI no menu do monitor.",
+                "Apenas tela preta (sem desligar)",
+                "Funcionou corretamente? Cada monitor escureceu e depois voltou a ligar?"
             ),
             ["pl"] = new(
                 "🇵🇱", "Polski",
@@ -388,7 +404,9 @@ public static class Strings
                 "Zgaszony",
                 "Pozostał włączony",
                 "Nieznany",
-                "Jeśli monitor pozostaje włączony, wybierz „Oba” lub włącz DDC/CI w menu monitora."
+                "Jeśli monitor pozostaje włączony, wybierz „Oba” lub włącz DDC/CI w menu monitora.",
+                "Tylko czarny ekran (bez wyłączania)",
+                "Czy wszystko zadziałało poprawnie? Czy każdy monitor zgasł, a potem znów się włączył?"
             ),
             ["zh"] = new(
                 "🇨🇳", "中文",
@@ -429,7 +447,9 @@ public static class Strings
                 "已关闭",
                 "仍亮着",
                 "未知",
-                "如果某台显示器仍亮着，请选择“两者”，或在该显示器的屏幕菜单中启用 DDC/CI。"
+                "如果某台显示器仍亮着，请选择“两者”，或在该显示器的屏幕菜单中启用 DDC/CI。",
+                "仅黑屏（不关闭显示器）",
+                "一切正常吗？每台显示器是否先熄灭然后又重新亮起？"
             ),
         };
 }

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Threading;
 using System.Windows.Forms;
+using Microsoft.Win32;
 using PowerOffScreensaver.Services;
 
 namespace PowerOffScreensaver;
@@ -18,11 +19,14 @@ public class ScreensaverHost : ApplicationContext
     private readonly GlobalInputHook _inputHook = new();
     private readonly InputGate _inputGate = new();
     private readonly EventHandler _processExitHandler;
+    private readonly SynchronizationContext? _uiContext;
+    private long _lastRebuildTick;
 
     public ScreensaverHost()
     {
         var settingsService = new Services.SettingsService();
         _settings = settingsService.Load();
+        _uiContext = SynchronizationContext.Current;
 
         _powerController = new MonitorPowerController(
             new Services.MonitorPowerService(),
@@ -34,6 +38,11 @@ public class ScreensaverHost : ApplicationContext
         // bring them back on (a DDC/CI-off panel won't wake from input by itself).
         _processExitHandler = (_, _) => { try { _powerController.PowerOn(); } catch { } };
         AppDomain.CurrentDomain.ProcessExit += _processExitHandler;
+
+        // Powering monitors off can make DisplayPort panels hot-unplug: Windows then
+        // rearranges the desktop and our black windows no longer cover the returning
+        // monitors (desktop peeks through on the sides). Re-cover on every change.
+        SystemEvents.DisplaySettingsChanged += OnDisplaySettingsChanged;
 
         CreateBlackoutForms();
         InstallGlobalInputHook();
@@ -49,6 +58,39 @@ public class ScreensaverHost : ApplicationContext
             _forms.Add(form);
             form.Show();
         }
+    }
+
+    private void OnDisplaySettingsChanged(object? sender, EventArgs e)
+    {
+        // SystemEvents fires on its own thread — marshal to the UI thread.
+        if (_uiContext != null)
+            _uiContext.Post(_ => RebuildBlackoutForms(), null);
+        else
+            RebuildBlackoutForms();
+    }
+
+    // Tear down and recreate the black windows so they cover whatever monitors
+    // currently exist. Recreating (rather than matching) keeps it simple and correct;
+    // black-over-black causes no visible flicker. We do NOT re-issue power-off here —
+    // that would risk a hot-unplug loop; coverage is what matters.
+    private void RebuildBlackoutForms()
+    {
+        if (Volatile.Read(ref _exiting) != 0) return;
+
+        // Coalesce bursts of change events.
+        long now = Environment.TickCount64;
+        if (now - _lastRebuildTick < 250) return;
+        _lastRebuildTick = now;
+
+        foreach (var form in _forms)
+        {
+            form.ExitRequested -= OnExitRequested;
+            try { form.Close(); form.Dispose(); } catch { }
+        }
+        _forms.Clear();
+
+        if (Volatile.Read(ref _exiting) != 0) return;
+        CreateBlackoutForms();
     }
 
     // Layer 1: catch every input system-wide, independent of window focus.
@@ -77,19 +119,17 @@ public class ScreensaverHost : ApplicationContext
         if (Interlocked.CompareExchange(ref _exiting, 1, 0) != 0)
             return;
 
-        // Stop receiving further input as we tear down.
+        // Stop reacting to input and display churn as we tear down.
         _inputHook.Dispose();
+        SystemEvents.DisplaySettingsChanged -= OnDisplaySettingsChanged;
 
-        // Bring every monitor back to a working state and CONFIRM it before we lock,
-        // so we never switch to the (invisible) secure desktop while a panel is still
-        // asleep. A DDC/CI-off panel won't wake from input on its own.
+        // Bring every monitor back to a working state (and, for DDC/CI, confirm it)
+        // BEFORE we lock, so we never switch to the secure desktop while a panel sleeps.
         var wake = _powerController.Wake(_settings.PowerOffMode);
         Services.WakeLog.Write(wake);
 
         if (_settings.LockOnExit)
         {
-            // Layers 3-5: lock while the black forms still cover the screen,
-            // verify it took effect, retry, then fall back before giving up.
             var guard = new LockGuard(
                 tryLock: _workstationLockService.TryLock,
                 isLocked: _lockStateProbe.IsLocked,
@@ -111,6 +151,7 @@ public class ScreensaverHost : ApplicationContext
         if (disposing)
         {
             _inputHook.Dispose();
+            SystemEvents.DisplaySettingsChanged -= OnDisplaySettingsChanged;
             try { _powerController.PowerOn(); } catch { }
             AppDomain.CurrentDomain.ProcessExit -= _processExitHandler;
         }

@@ -11,9 +11,18 @@ public class PowerPlanTests
     [InlineData(PowerOffMode.DdcCi, true)]
     [InlineData(PowerOffMode.Both, true)]
     [InlineData(PowerOffMode.Dpms, false)]
+    [InlineData(PowerOffMode.None, false)]
     public void UsesDdc_MatchesMode(PowerOffMode mode, bool expected)
     {
         Assert.Equal(expected, PowerPlan.UsesDdc(mode));
+    }
+
+    [Fact]
+    public void None_DoesNothing_NoDdc_NoDpms()
+    {
+        Assert.False(PowerPlan.UsesDdc(PowerOffMode.None));
+        Assert.False(PowerPlan.UseGlobalDpms(PowerOffMode.None, new[] { true }));
+        Assert.False(PowerPlan.UseGlobalDpms(PowerOffMode.None, new[] { false, false }));
     }
 
     [Fact]

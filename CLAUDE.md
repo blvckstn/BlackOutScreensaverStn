@@ -69,8 +69,16 @@ DPMS (`SC_MONITORPOWER`) — глобальный запрос, NVIDIA/AMD пр�
   `ChangeDisplaySettingsEx` (переустановка видеорежима — как Ctrl+Alt+Del). Пробуждение
   идёт ДО блокировки. Итог пишется в `wake.log` (`WakeLog`). Плюс `ProcessExit`-хэндлер
   восстанавливает мониторы при любом выходе (одним проходом, без ожидания).
+- `PowerOffMode.None` (feature 007) = «только чёрный экран» (окна поверх, без
+  выключения питания). Нужен для DisplayPort‑мониторов, которые при DPMS‑выключении
+  делают hot‑unplug (Windows перекладывает рабочий стол + звук подключения/отключения).
+- Re‑cover при смене раскладки: `ScreensaverHost` слушает
+  `SystemEvents.DisplaySettingsChanged` и пересоздаёт чёрные окна под текущие мониторы
+  (иначе после hot‑unplug DP на боковых виден рабочий стол). Power‑off повторно НЕ шлём
+  (чтобы не зациклить hot‑unplug) — только перекрываем.
 - Тест в настройках (`MonitorTestForm`): выключает→ждёт→читает состояние по
-  DDC/CI→включает, показывает per-monitor «погас/горит/неизвестно» + выбор метода.
+  DDC/CI→включает, показывает per-monitor «погас/горит/неизвестно», затем
+  спрашивает Yes/No «всё правильно отработало?» — при No переключает на None.
 - Headless `/install` (Program) ставит заставку из CLI + `initialized=true`,
   пишет `%LocalAppData%\Blackout ScreenSaver\install.log`.
 
@@ -113,7 +121,7 @@ DPMS (`SC_MONITORPOWER`) — глобальный запрос, NVIDIA/AMD пр�
 Сохранение языка: `AppSettings.Language` → `settings.json`
 
 ## Версионирование
-- Текущая: **1.7**
+- Текущая: **1.8**
 - Файл: `src/PowerOffScreensaver/PowerOffScreensaver.csproj` → `<Version>X.Y</Version>`
 - Автоотображение в заголовке окна настроек
 - Инкрементировать на 0.1 при каждом значимом изменении
@@ -125,7 +133,7 @@ DPMS (`SC_MONITORPOWER`) — глобальный запрос, NVIDIA/AMD пр�
 4. Приватный бранч `private` — для AI снапшотов
 
 ## Тесты
-xUnit 2.9.2 на net10.0-windows, 160 тестов, `dotnet test`
+xUnit 2.9.2 на net10.0-windows, 162 теста, `dotnet test`
 
 ## Команды
 ```powershell

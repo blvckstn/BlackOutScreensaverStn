@@ -32,7 +32,7 @@ public class SettingsForm : Form
         ["en", "ru", "de", "fr", "es", "it", "pt", "pl", "zh"];
 
     private static readonly PowerOffMode[] ModeOrder =
-        { PowerOffMode.Auto, PowerOffMode.DdcCi, PowerOffMode.Dpms, PowerOffMode.Both };
+        { PowerOffMode.Dpms, PowerOffMode.Auto, PowerOffMode.DdcCi, PowerOffMode.Both, PowerOffMode.None };
 
     public SettingsForm()
     {
@@ -46,7 +46,7 @@ public class SettingsForm : Form
     private static string AppVersion()
     {
         var ver = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version;
-        return ver != null ? $"v{ver.Major}.{ver.Minor}" : "v1.7";
+        return ver != null ? $"v{ver.Major}.{ver.Minor}" : "v1.8";
     }
 
     private void InitializeUI()
@@ -186,7 +186,7 @@ public class SettingsForm : Form
         // Rebuild the mode combo in the current language, preserving the selection.
         var keepMode = CurrentMode();
         _modeCombo.Items.Clear();
-        _modeCombo.Items.AddRange(new object[] { s.ModeAuto, s.ModeDdcCi, s.ModeDpms, s.ModeBoth });
+        _modeCombo.Items.AddRange(new object[] { s.ModeDpms, s.ModeAuto, s.ModeDdcCi, s.ModeBoth, s.ModeNone });
         _modeCombo.SelectedIndex = Math.Max(0, Array.IndexOf(ModeOrder, keepMode));
 
         _toolTip.SetToolTip(_lockCheckBox, s.LockOnExitHint);
