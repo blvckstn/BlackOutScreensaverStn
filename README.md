@@ -130,7 +130,7 @@ Open the settings dialog with `/c`. Every option has an inline tooltip in your c
 | Monitor power-off method | DPMS | DPMS (default, always wakes); Auto / DDC/CI / Both use per-monitor DDC/CI Standby to also darken side monitors; **Black screen only** never powers off (just covers the screens) for setups where power-off misbehaves |
 | Power-off delay (ms) | 500 | Pause before sending the monitor power-off command |
 
-DPMS is the default because it always wakes on input. If DPMS leaves a side monitor lit, use **Test monitors…** to try Auto or DDC/CI: the test turns each screen off and back on so you can confirm your monitors both darken *and* wake before relying on it. If a monitor doesn't come back in the test, stay on DPMS for that machine.
+DPMS is the default because it always wakes on input. **Test monitors…** steps through each monitor one at a time, with a 5-second "this monitor will go dark now" countdown, powers that monitor off, brings everything back, and asks you to confirm it darkened and returned. Run it with different methods to find what each monitor responds to — one monitor may prefer DDC/CI while another needs DPMS.
 
 Settings live in `%AppData%\PowerOffScreensaver\settings.json`.
 
@@ -325,7 +325,7 @@ dotnet test
 | Метод отключения мониторов | DPMS | DPMS (по умолчанию, всегда просыпается); Авто / DDC/CI / Оба гасят и боковые мониторы через по‑мониторный DDC/CI Standby; **Только чёрный экран** не выключает питание (просто перекрывает экраны) — для конфигураций, где выключение работает некорректно |
 | Задержка перед отключением (мс) | 500 | Пауза перед отправкой команды мониторам |
 
-DPMS стоит по умолчанию, потому что всегда просыпается от ввода. Если DPMS оставляет боковой монитор включённым, кнопкой **Тест мониторов…** попробуйте Авто или DDC/CI: тест гасит и снова включает каждый экран, чтобы вы убедились, что мониторы и гаснут, и просыпаются, прежде чем полагаться на этот режим. Если монитор в тесте не вернулся — оставьте для этой машины DPMS.
+DPMS стоит по умолчанию, потому что всегда просыпается от ввода. **Тест мониторов…** проходит по каждому монитору по очереди: 5‑секундный отсчёт «сейчас данный монитор погаснет», затем выключает этот монитор, возвращает всё обратно и спрашивает, погас ли он и вернулся ли. Запускайте тест с разными методами, чтобы понять, на что откликается каждый монитор — один может предпочитать DDC/CI, другому нужен DPMS.
 
 Настройки хранятся в `%AppData%\PowerOffScreensaver\settings.json`.
 

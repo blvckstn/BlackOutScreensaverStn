@@ -76,9 +76,15 @@ DPMS (`SC_MONITORPOWER`) — глобальный запрос, NVIDIA/AMD пр�
   `SystemEvents.DisplaySettingsChanged` и пересоздаёт чёрные окна под текущие мониторы
   (иначе после hot‑unplug DP на боковых виден рабочий стол). Power‑off повторно НЕ шлём
   (чтобы не зациклить hot‑unplug) — только перекрываем.
-- Тест в настройках (`MonitorTestForm`): выключает→ждёт→читает состояние по
-  DDC/CI→включает, показывает per-monitor «погас/горит/неизвестно», затем
-  спрашивает Yes/No «всё правильно отработало?» — при No переключает на None.
+- Тест в настройках (`MonitorTestForm`, feature 007) — ПОШАГОВЫЙ по каждому монитору:
+  для каждого 5‑сек отсчёт «Сейчас данный монитор погаснет» → выключает ЭТОТ монитор
+  (`DdcCiService.PowerOne`/`MonitorPowerController.PowerOffOne`; DDC точечно, DPMS
+  глобально) → держит тёмным → будит всё → спрашивает Yes/No по этому монитору.
+  Так видно, какой монитор на какой метод откликается. DDC per‑monitor через
+  `ForEachPhysical(action, onlyIndex)`.
+- UX настроек (feature 007): исправлена вёрстка (комбо не наезжает на подпись),
+  убрана дублирующая кнопка «Тест», «Тест мониторов…» и «Проверить» слева,
+  ОК/Отмена — справа снизу.
 - Headless `/install` (Program) ставит заставку из CLI + `initialized=true`,
   пишет `%LocalAppData%\Blackout ScreenSaver\install.log`.
 
@@ -121,7 +127,7 @@ DPMS (`SC_MONITORPOWER`) — глобальный запрос, NVIDIA/AMD пр�
 Сохранение языка: `AppSettings.Language` → `settings.json`
 
 ## Версионирование
-- Текущая: **1.8**
+- Текущая: **1.9**
 - Файл: `src/PowerOffScreensaver/PowerOffScreensaver.csproj` → `<Version>X.Y</Version>`
 - Автоотображение в заголовке окна настроек
 - Инкрементировать на 0.1 при каждом значимом изменении

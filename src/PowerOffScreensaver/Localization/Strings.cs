@@ -46,7 +46,10 @@ public record LangStrings(
     string ResultUnknown,
     string TestHint,
     string ModeNone,
-    string TestConfirmQuestion
+    string TestConfirmQuestion,
+    string TestMonitorCountdown,
+    string TestMonitorHeaderFmt,
+    string TestPerMonitorConfirmFmt
 );
 
 public static class Strings
@@ -105,7 +108,10 @@ public static class Strings
                 "Unknown",
                 "If a monitor stays on, pick 'Both', or enable DDC/CI in that monitor's on-screen menu.",
                 "Black screen only (no power-off)",
-                "Did it work correctly? Did every monitor go dark and then come back on?"
+                "Did it work correctly? Did every monitor go dark and then come back on?",
+                "This monitor will go dark now",
+                "Monitor {0} of {1}",
+                "Monitor {0}: did it go dark and then come back on correctly?"
             ),
             ["ru"] = new(
                 "🇷🇺", "Русский",
@@ -148,7 +154,10 @@ public static class Strings
                 "Неизвестно",
                 "Если монитор не гаснет, выберите «Оба» или включите DDC/CI в экранном меню этого монитора.",
                 "Только чёрный экран (без выключения)",
-                "Всё отработало правильно? Каждый монитор погас, а затем снова включился?"
+                "Всё отработало правильно? Каждый монитор погас, а затем снова включился?",
+                "Сейчас данный монитор погаснет",
+                "Монитор {0} из {1}",
+                "Монитор {0}: он корректно погас, а затем снова включился?"
             ),
             ["de"] = new(
                 "🇩🇪", "Deutsch",
@@ -191,7 +200,10 @@ public static class Strings
                 "Unbekannt",
                 "Bleibt ein Monitor an, wählen Sie „Beide“ oder aktivieren Sie DDC/CI im Bildschirmmenü des Monitors.",
                 "Nur schwarzer Bildschirm (kein Abschalten)",
-                "Hat alles korrekt funktioniert? Wurde jeder Monitor dunkel und ging dann wieder an?"
+                "Hat alles korrekt funktioniert? Wurde jeder Monitor dunkel und ging dann wieder an?",
+                "Dieser Monitor wird jetzt dunkel",
+                "Monitor {0} von {1}",
+                "Monitor {0}: Wurde er dunkel und ging dann korrekt wieder an?"
             ),
             ["fr"] = new(
                 "🇫🇷", "Français",
@@ -234,7 +246,10 @@ public static class Strings
                 "Inconnu",
                 "Si un moniteur reste allumé, choisissez « Les deux » ou activez le DDC/CI dans le menu du moniteur.",
                 "Écran noir seulement (sans extinction)",
-                "Tout a bien fonctionné ? Chaque moniteur s'est-il éteint puis rallumé ?"
+                "Tout a bien fonctionné ? Chaque moniteur s'est-il éteint puis rallumé ?",
+                "Ce moniteur va s'éteindre maintenant",
+                "Moniteur {0} sur {1}",
+                "Moniteur {0} : s'est-il éteint puis rallumé correctement ?"
             ),
             ["es"] = new(
                 "🇪🇸", "Español",
@@ -277,7 +292,10 @@ public static class Strings
                 "Desconocido",
                 "Si un monitor sigue encendido, elija «Ambos» o active DDC/CI en el menú del monitor.",
                 "Solo pantalla negra (sin apagado)",
-                "¿Funcionó todo bien? ¿Cada monitor se apagó y luego volvió a encenderse?"
+                "¿Funcionó todo bien? ¿Cada monitor se apagó y luego volvió a encenderse?",
+                "Este monitor se apagará ahora",
+                "Monitor {0} de {1}",
+                "Monitor {0}: ¿se apagó y luego volvió a encenderse correctamente?"
             ),
             ["it"] = new(
                 "🇮🇹", "Italiano",
@@ -320,7 +338,10 @@ public static class Strings
                 "Sconosciuto",
                 "Se un monitor resta acceso, scegli «Entrambi» o abilita il DDC/CI nel menu del monitor.",
                 "Solo schermo nero (senza spegnimento)",
-                "Ha funzionato tutto correttamente? Ogni monitor si è spento e poi riacceso?"
+                "Ha funzionato tutto correttamente? Ogni monitor si è spento e poi riacceso?",
+                "Questo monitor si spegnerà ora",
+                "Monitor {0} di {1}",
+                "Monitor {0}: si è spento e poi riacceso correttamente?"
             ),
             ["pt"] = new(
                 "🇵🇹", "Português",
@@ -363,7 +384,10 @@ public static class Strings
                 "Desconhecido",
                 "Se um monitor continuar ligado, escolha «Ambos» ou ative o DDC/CI no menu do monitor.",
                 "Apenas tela preta (sem desligar)",
-                "Funcionou corretamente? Cada monitor escureceu e depois voltou a ligar?"
+                "Funcionou corretamente? Cada monitor escureceu e depois voltou a ligar?",
+                "Este monitor vai apagar agora",
+                "Monitor {0} de {1}",
+                "Monitor {0}: escureceu e depois voltou a ligar corretamente?"
             ),
             ["pl"] = new(
                 "🇵🇱", "Polski",
@@ -406,7 +430,10 @@ public static class Strings
                 "Nieznany",
                 "Jeśli monitor pozostaje włączony, wybierz „Oba” lub włącz DDC/CI w menu monitora.",
                 "Tylko czarny ekran (bez wyłączania)",
-                "Czy wszystko zadziałało poprawnie? Czy każdy monitor zgasł, a potem znów się włączył?"
+                "Czy wszystko zadziałało poprawnie? Czy każdy monitor zgasł, a potem znów się włączył?",
+                "Ten monitor zaraz zgaśnie",
+                "Monitor {0} z {1}",
+                "Monitor {0}: czy zgasł, a potem poprawnie się włączył?"
             ),
             ["zh"] = new(
                 "🇨🇳", "中文",
@@ -449,7 +476,10 @@ public static class Strings
                 "未知",
                 "如果某台显示器仍亮着，请选择“两者”，或在该显示器的屏幕菜单中启用 DDC/CI。",
                 "仅黑屏（不关闭显示器）",
-                "一切正常吗？每台显示器是否先熄灭然后又重新亮起？"
+                "一切正常吗？每台显示器是否先熄灭然后又重新亮起？",
+                "此显示器即将熄灭",
+                "显示器 {0} / {1}",
+                "显示器 {0}：它是否先熄灭然后又正确亮起？"
             ),
         };
 }

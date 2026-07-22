@@ -128,6 +128,32 @@ public sealed class MonitorPowerController
     /// <summary>Enumerate physical monitors (for the settings test dialog).</summary>
     public IReadOnlyList<MonitorProbe> Probe() => SafeProbe();
 
+    /// <summary>Probe a single monitor by index (for the per-monitor test).</summary>
+    public MonitorProbe? ProbeOne(int index)
+    {
+        try { return _ddc.ProbeOne(index); }
+        catch { return null; }
+    }
+
+    /// <summary>
+    /// Power off one monitor for the per-monitor test. DDC/CI modes target that panel
+    /// only; DPMS is global (there is no per-monitor DPMS), so it dims all of them.
+    /// </summary>
+    public void PowerOffOne(int index, PowerOffMode mode)
+    {
+        if (mode == PowerOffMode.None)
+            return;
+
+        if (PowerPlan.UsesDdc(mode))
+        {
+            try { _ddc.PowerOne(index, false); } catch { }
+        }
+        else
+        {
+            _dpms.TryPowerOff(); // global
+        }
+    }
+
     private static IReadOnlyList<MonitorWakeState> Correlate(
         IReadOnlyList<MonitorProbe> before, IReadOnlyList<MonitorProbe> after)
     {
