@@ -46,8 +46,8 @@ AMD users hit similar problems on multi-monitor setups, usually milder, and most
 BOSS doesn't wait for Windows to coordinate monitor power. It acts directly:
 
 1. It covers every screen at once with a dedicated fullscreen black window per monitor. That gives you burn-in protection and a real blackout no matter what the driver does.
-2. It powers off each monitor individually over DDC/CI (the VESA MCCS "power mode" command), talking straight to the panel instead of asking the GPU driver. That is what makes the second and third monitor actually go dark when a plain DPMS broadcast leaves them lit. Monitors that don't speak DDC/CI still get the DPMS broadcast as a fallback, and Auto mode figures out which is which.
-3. When you return, it wakes every monitor (a DDC/CI-off panel won't come back on its own), locks Windows, and verifies the lock actually took effect before it exits, so you are never left at an unlocked desktop or a dark side monitor.
+2. It sends the DPMS power-off (the standard Windows display-off) and, by default, relies on it because DPMS always wakes on input. If DPMS leaves a monitor lit (a common NVIDIA/AMD quirk on the second and third display), you can switch to per-monitor DDC/CI, which talks straight to each panel over the VESA MCCS channel. BOSS uses the DDC/CI *Standby* state so the panel keeps its control bus alive and still wakes cleanly.
+3. When you return, it wakes every monitor — a real input event and a re-asserted video signal, then for DDC/CI it verifies each panel is back on — and only then locks Windows, so you are never left at an unlocked desktop or a dark screen.
 
 You don't need to change drivers, edit your power plan, or run as administrator. It's one `.scr` file: drop it in and go.
 
@@ -56,8 +56,8 @@ You don't need to change drivers, edit your power plan, or run as administrator.
 ## Features
 
 - Triple, dual, or single monitor, with one dedicated black window per display and no gaps
-- Reliable per-monitor power-off over DDC/CI (VESA MCCS, VCP 0xD6) so the second and third monitor actually go dark, with the `WM_SYSCOMMAND SC_MONITORPOWER` DPMS broadcast as a fallback
-- Auto-detects each monitor's DDC/CI support and picks the method; a built-in **monitor test** shows which screens really turned off
+- Two power-off methods: **DPMS** (default — the display always wakes reliably on input) and per-monitor **DDC/CI Standby** (VESA MCCS) to also darken side monitors that ignore DPMS
+- A built-in **monitor test** turns each screen off and back on so you can pick the method that both darkens *and* reliably wakes your monitors
 - Exits on any mouse movement (5 px dead zone) or any keypress
 - Guaranteed lock on wake: global mouse and keyboard hooks catch input regardless of window focus, the display is woken so the lock screen is visible, and the lock is verified with a retry and a fallback
 - Full screensaver protocol: `/s` run, `/c` settings, `/p` preview
@@ -127,10 +127,10 @@ Open the settings dialog with `/c`. Every option has an inline tooltip in your c
 | Setting | Default | Description |
 |---|---|---|
 | Lock workstation on exit | On | Locks Windows when the screensaver exits, then confirms the lock took effect |
-| Monitor power-off method | Auto | Auto (DDC/CI per monitor + DPMS for the rest), DDC/CI only, DPMS only, or Both |
+| Monitor power-off method | DPMS | DPMS (default, always wakes), or Auto / DDC/CI / Both which use per-monitor DDC/CI Standby to also darken side monitors |
 | Power-off delay (ms) | 500 | Pause before sending the monitor power-off command |
 
-Use **Test monitors…** to turn each screen off for a few seconds and see which ones actually go dark. If a monitor stays lit, switch the method to **Both** or enable DDC/CI in that monitor's on-screen menu.
+DPMS is the default because it always wakes on input. If DPMS leaves a side monitor lit, use **Test monitors…** to try Auto or DDC/CI: the test turns each screen off and back on so you can confirm your monitors both darken *and* wake before relying on it. If a monitor doesn't come back in the test, stay on DPMS for that machine.
 
 Settings live in `%AppData%\PowerOffScreensaver\settings.json`.
 
@@ -238,8 +238,8 @@ NVIDIA GeForce Experience и его фоновый сервис NVIDIA LocalSyst
 BOSS не ждёт, пока Windows скоординирует выключение мониторов. Он действует напрямую:
 
 1. Сразу закрывает все экраны отдельными полноэкранными чёрными окнами. Это даёт защиту от выгорания и настоящее затемнение независимо от поведения драйвера.
-2. Выключает каждый монитор по отдельности через DDC/CI (команда «power mode» из VESA MCCS), обращаясь напрямую к панели, а не к драйверу видеокарты. Именно это гасит второй и третий монитор там, где обычной DPMS-рассылки не хватает. Мониторы без DDC/CI получают DPMS-рассылку как запасной вариант, а режим «Авто» сам определяет, кому что.
-3. При возврате будит каждый монитор (панель, выключенная по DDC/CI, сама не включится), блокирует Windows и проверяет, что блокировка действительно сработала, прежде чем завершиться — так что вы не останетесь ни у разблокированного стола, ни с погасшим боковым монитором.
+2. Отправляет DPMS-выключение (штатное «погасить дисплей» в Windows) и по умолчанию полагается на него, потому что DPMS всегда просыпается от ввода. Если DPMS оставляет монитор включённым (частая особенность NVIDIA/AMD на втором и третьем экране), можно переключиться на по‑мониторный DDC/CI, который обращается к панели напрямую по каналу VESA MCCS. BOSS использует состояние DDC/CI *Standby*, чтобы шина управления монитора оставалась живой и он чисто просыпался.
+3. При возврате будит каждый монитор — реальное событие ввода и заново поданный видеосигнал, а для DDC/CI ещё и проверяет, что каждая панель снова включилась, — и только потом блокирует Windows, так что вы не останетесь ни у разблокированного стола, ни с чёрным экраном.
 
 Не нужно менять драйверы, править план электропитания или запускать от администратора. Это один файл `.scr`: скопировал и работает.
 
@@ -248,8 +248,8 @@ BOSS не ждёт, пока Windows скоординирует выключен
 ## Возможности
 
 - Поддержка triple / dual / single монитор, по отдельному чёрному окну на каждый дисплей, без зазоров
-- Надёжное выключение каждого монитора по DDC/CI (VESA MCCS, VCP 0xD6) — второй и третий экран действительно гаснут, а DPMS-рассылка `WM_SYSCOMMAND SC_MONITORPOWER` работает как запасной вариант
-- Автоопределение поддержки DDC/CI у каждого монитора и выбор метода; встроенный **тест мониторов** показывает, какие экраны реально погасли
+- Два метода выключения: **DPMS** (по умолчанию — дисплей всегда надёжно просыпается от ввода) и по‑мониторный **DDC/CI Standby** (VESA MCCS), чтобы гасли и боковые мониторы, игнорирующие DPMS
+- Встроенный **тест мониторов** гасит и снова включает каждый экран, чтобы вы выбрали метод, который и гасит, и надёжно будит ваши мониторы
 - Выход при любом движении мыши (мёртвая зона 5 пикселей) или нажатии клавиши
 - Гарантированная блокировка при пробуждении: глобальные хуки мыши и клавиатуры ловят ввод независимо от фокуса окна, дисплей будится, чтобы экран блокировки был виден, а сама блокировка проверяется с повтором и резервным путём
 - Полный протокол хранителя экрана: `/s` запуск, `/c` настройки, `/p` превью
@@ -319,10 +319,10 @@ dotnet test
 | Параметр | По умолчанию | Описание |
 |---|---|---|
 | Блокировать рабочую станцию при выходе | Вкл | Блокирует Windows при выходе из хранителя и подтверждает, что блокировка сработала |
-| Метод отключения мониторов | Авто | Авто (DDC/CI на каждый монитор + DPMS для остальных), только DDC/CI, только DPMS или оба |
+| Метод отключения мониторов | DPMS | DPMS (по умолчанию, всегда просыпается) либо Авто / DDC/CI / Оба — они гасят и боковые мониторы через по‑мониторный DDC/CI Standby |
 | Задержка перед отключением (мс) | 500 | Пауза перед отправкой команды мониторам |
 
-Кнопка **Тест мониторов…** выключает каждый экран на несколько секунд, чтобы вы увидели, какие реально гаснут. Если монитор не гаснет, переключите метод на **Оба** или включите DDC/CI в экранном меню монитора.
+DPMS стоит по умолчанию, потому что всегда просыпается от ввода. Если DPMS оставляет боковой монитор включённым, кнопкой **Тест мониторов…** попробуйте Авто или DDC/CI: тест гасит и снова включает каждый экран, чтобы вы убедились, что мониторы и гаснут, и просыпаются, прежде чем полагаться на этот режим. Если монитор в тесте не вернулся — оставьте для этой машины DPMS.
 
 Настройки хранятся в `%AppData%\PowerOffScreensaver\settings.json`.
 

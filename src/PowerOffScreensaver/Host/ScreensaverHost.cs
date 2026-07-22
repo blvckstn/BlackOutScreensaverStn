@@ -83,7 +83,7 @@ public class ScreensaverHost : ApplicationContext
         // Bring every monitor back to a working state and CONFIRM it before we lock,
         // so we never switch to the (invisible) secure desktop while a panel is still
         // asleep. A DDC/CI-off panel won't wake from input on its own.
-        var wake = _powerController.WakeVerified();
+        var wake = _powerController.Wake(_settings.PowerOffMode);
         Services.WakeLog.Write(wake);
 
         if (_settings.LockOnExit)

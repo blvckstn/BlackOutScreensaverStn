@@ -40,17 +40,17 @@ public class PowerModeSettingsTests
     }
 
     [Fact]
-    public void ParsePowerOffMode_Absent_LegacyDdcFalse_DefaultsAuto()
+    public void ParsePowerOffMode_Absent_LegacyDdcFalse_DefaultsDpms()
     {
         var root = Json("{}");
-        Assert.Equal(PowerOffMode.Auto, SettingsService.ParsePowerOffMode(root, legacyDdcCiEnabled: false));
+        Assert.Equal(PowerOffMode.Dpms, SettingsService.ParsePowerOffMode(root, legacyDdcCiEnabled: false));
     }
 
     [Fact]
     public void ParsePowerOffMode_UnknownString_FallsBackToDefault()
     {
         var root = Json("{\"powerOffMode\": \"nonsense\"}");
-        Assert.Equal(PowerOffMode.Auto, SettingsService.ParsePowerOffMode(root, legacyDdcCiEnabled: false));
+        Assert.Equal(PowerOffMode.Dpms, SettingsService.ParsePowerOffMode(root, legacyDdcCiEnabled: false));
     }
 
     [Theory]

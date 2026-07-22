@@ -169,7 +169,7 @@ public sealed class MonitorTestForm : Form
 
             // Read the off-state (did they actually go dark?), then wake and verify.
             var afterOff = await Task.Run(() => _controller.Probe());
-            var wake = await Task.Run(() => _controller.WakeVerified());
+            var wake = await Task.Run(() => _controller.Wake(mode));
 
             FillResults(afterOff, s);
 

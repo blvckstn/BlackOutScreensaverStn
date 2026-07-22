@@ -14,7 +14,11 @@ public sealed class DdcCiService : IDdcCiService
 {
     private const byte VCP_POWER = 0xD6;
     private const uint POWER_ON = 1;   // 0x01 On
-    private const uint POWER_OFF = 4;  // 0x04 Off (DPMS off / backlight off)
+    // 0x02 Standby (not 0x04 Off): Standby blanks the panel but keeps the DDC/CI
+    // bus alive, so the monitor can be woken again by a DDC/CI "On" or DPMS. Hard
+    // Off (0x04/0x05) can kill the DDC controller and strand the monitor until it
+    // is physically power-cycled.
+    private const uint POWER_OFF = 2;
 
     private delegate bool MonitorEnumProc(IntPtr hMonitor, IntPtr hdc, IntPtr lprcMonitor, IntPtr dwData);
 
@@ -72,7 +76,7 @@ public sealed class DdcCiService : IDdcCiService
                     state = cur switch
                     {
                         1 => DdcPowerState.On,
-                        4 or 5 => DdcPowerState.Off,
+                        2 or 3 or 4 or 5 => DdcPowerState.Off, // standby/suspend/off = not on
                         _ => DdcPowerState.Other
                     };
                 }
