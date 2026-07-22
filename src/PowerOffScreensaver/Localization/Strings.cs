@@ -59,7 +59,8 @@ public record LangStrings(
     string TestRetry,
     string TestNext,
     string ColMethod,
-    string TestWakeInFmt
+    string TestWakeInFmt,
+    string TestLogLabel
 );
 
 public static class Strings
@@ -130,7 +131,8 @@ public static class Strings
                 "Retry with this method",
                 "Next monitor",
                 "Method",
-                "Waking in {0} s"
+                "Waking in {0} s",
+                "Record log"
             ),
             ["ru"] = new(
                 "🇷🇺", "Русский",
@@ -185,7 +187,8 @@ public static class Strings
                 "Повторить с этим методом",
                 "Следующий монитор",
                 "Метод",
-                "Пробуждение через {0} с"
+                "Пробуждение через {0} с",
+                "Записывать лог"
             ),
             ["de"] = new(
                 "🇩🇪", "Deutsch",
@@ -240,7 +243,8 @@ public static class Strings
                 "Mit dieser Methode wiederholen",
                 "Nächster Monitor",
                 "Methode",
-                "Aufwecken in {0} s"
+                "Aufwecken in {0} s",
+                "Log aufzeichnen"
             ),
             ["fr"] = new(
                 "🇫🇷", "Français",
@@ -295,7 +299,8 @@ public static class Strings
                 "Réessayer avec cette méthode",
                 "Moniteur suivant",
                 "Méthode",
-                "Réveil dans {0} s"
+                "Réveil dans {0} s",
+                "Enregistrer le journal"
             ),
             ["es"] = new(
                 "🇪🇸", "Español",
@@ -350,7 +355,8 @@ public static class Strings
                 "Reintentar con este método",
                 "Siguiente monitor",
                 "Método",
-                "Encendiendo en {0} s"
+                "Encendiendo en {0} s",
+                "Registrar registro"
             ),
             ["it"] = new(
                 "🇮🇹", "Italiano",
@@ -405,7 +411,8 @@ public static class Strings
                 "Riprova con questo metodo",
                 "Monitor successivo",
                 "Metodo",
-                "Riattivazione tra {0} s"
+                "Riattivazione tra {0} s",
+                "Registra log"
             ),
             ["pt"] = new(
                 "🇵🇹", "Português",
@@ -460,7 +467,8 @@ public static class Strings
                 "Repetir com este método",
                 "Próximo monitor",
                 "Método",
-                "Ligando em {0} s"
+                "Ligando em {0} s",
+                "Gravar log"
             ),
             ["pl"] = new(
                 "🇵🇱", "Polski",
@@ -515,7 +523,8 @@ public static class Strings
                 "Powtórz tą metodą",
                 "Następny monitor",
                 "Metoda",
-                "Wybudzanie za {0} s"
+                "Wybudzanie za {0} s",
+                "Zapisuj log"
             ),
             ["zh"] = new(
                 "🇨🇳", "中文",
@@ -570,7 +579,8 @@ public static class Strings
                 "用此方法重试",
                 "下一台显示器",
                 "方法",
-                "{0} 秒后唤醒"
+                "{0} 秒后唤醒",
+                "记录日志"
             ),
         };
 }
