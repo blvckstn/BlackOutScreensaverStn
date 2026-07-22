@@ -81,7 +81,8 @@ public class SettingsService : ISettingsService
                 Enum.IsDefined(typeof(PowerOffMode), modeElem.GetInt32()))
                 return (PowerOffMode)modeElem.GetInt32();
         }
-        return legacyDdcCiEnabled ? PowerOffMode.Both : PowerOffMode.Auto;
+        // Absent → DPMS (wake-safe default). Legacy ddcCiEnabled=true keeps DDC (Both).
+        return legacyDdcCiEnabled ? PowerOffMode.Both : PowerOffMode.Dpms;
     }
 
     public void Save(AppSettings settings)

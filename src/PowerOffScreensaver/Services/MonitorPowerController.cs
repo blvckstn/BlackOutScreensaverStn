@@ -49,18 +49,35 @@ public sealed class MonitorPowerController
     }
 
     /// <summary>
-    /// Bring every monitor back to a working state and confirm it. Runs a real
-    /// input event + DPMS On + DDC/CI On, then polls DDC/CI readback until all
-    /// verifiable panels report On (or attempts run out). On the last attempt it
-    /// escalates to a display-mode re-apply to recover panels stuck at "no signal".
-    /// Returns a report describing what happened, for logging.
+    /// Bring every monitor back to a working state before locking. For DPMS mode a
+    /// real input event plus SC_MONITORPOWER On reliably wakes the panels (the OS
+    /// handles it), so no DDC/CI verification is needed. For DDC/CI modes we also
+    /// send DDC/CI On and verify each panel reports On via readback, retrying and
+    /// finally re-applying the display mode. Returns a report for logging.
     /// </summary>
-    public WakeReport WakeVerified(int maxAttempts = 6, int perAttemptDelayMs = 300, bool allowRedetect = true)
+    public WakeReport Wake(PowerOffMode mode, int maxAttempts = 6, int perAttemptDelayMs = 300, bool allowRedetect = true)
     {
         long start = Environment.TickCount64;
         DisplaySignal.KeepDisplayOn();
-
         var before = SafeProbe();
+
+        if (!PowerPlan.UsesDdc(mode))
+        {
+            // DPMS-only: input + SC_MONITORPOWER On, twice, is enough — the display
+            // manager restores every monitor and never leaves one stranded.
+            for (int i = 0; i < 2; i++)
+            {
+                DisplaySignal.NudgeInput();
+                _dpms.TryPowerOn();
+                Thread.Sleep(perAttemptDelayMs / 2);
+            }
+            DisplaySignal.KeepDisplayOn();
+            var afterDpms = SafeProbe();
+            return new WakeReport(Correlate(before, afterDpms), 1, true, false,
+                Environment.TickCount64 - start);
+        }
+
+        // DDC/CI modes: wake and verify each panel reports On.
         var after = before;
         int attempt = 0;
         bool escalated = false;
@@ -69,7 +86,7 @@ public sealed class MonitorPowerController
         {
             DisplaySignal.NudgeInput();     // real input → leave DPMS sleep
             _dpms.TryPowerOn();             // SC_MONITORPOWER ON → re-assert signal
-            try { _ddc.PowerAll(true); } catch { }  // DDC/CI On → per-monitor backlight
+            try { _ddc.PowerAll(true); } catch { }  // DDC/CI On → per-monitor
 
             Thread.Sleep(perAttemptDelayMs);
             after = SafeProbe();
@@ -91,16 +108,13 @@ public sealed class MonitorPowerController
             }
         }
 
-        // Keep the display asserted through the lock transition.
         DisplaySignal.KeepDisplayOn();
-
-        long elapsed = Environment.TickCount64 - start;
         return new WakeReport(
             Correlate(before, after),
             Math.Min(attempt, maxAttempts),
             WakePlan.AllAwake(after),
             escalated,
-            elapsed);
+            Environment.TickCount64 - start);
     }
 
     /// <summary>Single best-effort restore for exit/dispose paths that must not block.</summary>

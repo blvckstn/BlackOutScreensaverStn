@@ -53,11 +53,16 @@ src/PowerOffScreensaver/
 DPMS (`SC_MONITORPOWER`) — глобальный запрос, NVIDIA/AMD применяют его только к
 части экранов (обычно основному) → боковые мониторы горят. Решение — адресовать
 каждый монитор напрямую по **DDC/CI (VESA MCCS, VCP 0xD6)** через `dxva2.dll`.
-- `PowerOffMode`: Auto (по умолч.) · DdcCi · Dpms · Both. Auto = DDC/CI на каждый
-  монитор + DPMS для тех, кто DDC/CI не поддерживает. Чистая логика — `PowerPlan`.
+- `PowerOffMode`: Dpms (**по умолч., wake-safe**) · Auto · DdcCi · Both. Чистая
+  логика — `PowerPlan`. ВАЖНО: жёсткий DDC-off (0x04/0x05) может «застрелить»
+  шину DDC и оставить монитор без пробуждения (нужен физический power-cycle) —
+  поэтому DDC теперь шлёт **Standby (0x02)** (шина жива, монитор будится), а
+  дефолт = DPMS (всегда просыпается от ввода). DDC/Auto/Both — только по выбору.
 - `DdcCiService`: `EnumDisplayMonitors`→`GetPhysicalMonitorsFromHMONITOR`,
-  `SetVCPFeature(0xD6, 4=off/1=on)`, `GetVCPFeatureAndVCPFeatureReply` для проверки.
-- Пробуждение (feature 005, `MonitorPowerController.WakeVerified` + `DisplaySignal`):
+  `SetVCPFeature(0xD6, 2=standby/1=on)`, `GetVCPFeatureAndVCPFeatureReply` для проверки.
+- Пробуждение (feature 005/006, `MonitorPowerController.Wake(mode)` + `DisplaySignal`):
+  DPMS-режим = быстрый разбуд (реальный ввод + SC_MONITORPOWER on, без DDC-проверки).
+  DDC-режимы (Standby) = верификация по DDC-чтению ниже.
   реальный ввод `SendInput(F15)` → `SetThreadExecutionState(ES_DISPLAY_REQUIRED)`
   → DPMS ON → DDC/CI ON, затем ПРОВЕРКА по DDC-чтению (`WakePlan.AllAwake`), что
   каждый монитор вернулся в On; повторы, на последней попытке эскалация
@@ -108,7 +113,7 @@ DPMS (`SC_MONITORPOWER`) — глобальный запрос, NVIDIA/AMD пр�
 Сохранение языка: `AppSettings.Language` → `settings.json`
 
 ## Версионирование
-- Текущая: **1.6**
+- Текущая: **1.7**
 - Файл: `src/PowerOffScreensaver/PowerOffScreensaver.csproj` → `<Version>X.Y</Version>`
 - Автоотображение в заголовке окна настроек
 - Инкрементировать на 0.1 при каждом значимом изменении
