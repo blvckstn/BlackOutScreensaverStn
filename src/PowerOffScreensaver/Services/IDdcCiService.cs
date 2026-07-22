@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Drawing;
 
 namespace PowerOffScreensaver.Services;
 
@@ -14,6 +15,13 @@ public enum DdcPowerState
 /// <summary>One physical monitor as seen over DDC/CI.</summary>
 public sealed record MonitorProbe(int Index, string Description, bool SupportsPower, DdcPowerState State);
 
+/// <summary>
+/// A physical monitor with its on-screen position, so the test can place windows
+/// on the right monitor and number them 1..N (raw names are often all identical,
+/// e.g. "Generic PnP Monitor").
+/// </summary>
+public sealed record MonitorInfo(int Index, string Description, Rectangle Bounds, bool SupportsDdc, DdcPowerState State);
+
 /// <summary>Outcome of a bulk power command.</summary>
 public sealed record DdcResult(int Total, int Succeeded)
 {
@@ -25,6 +33,9 @@ public interface IDdcCiService
 {
     /// <summary>Enumerate physical monitors with DDC/CI support and current power state.</summary>
     IReadOnlyList<MonitorProbe> Probe();
+
+    /// <summary>Enumerate physical monitors with their screen bounds (for positioning + numbering).</summary>
+    IReadOnlyList<MonitorInfo> Inventory();
 
     /// <summary>Probe a single physical monitor by its <see cref="Probe"/> index.</summary>
     MonitorProbe? ProbeOne(int index);

@@ -49,7 +49,15 @@ public record LangStrings(
     string TestConfirmQuestion,
     string TestMonitorCountdown,
     string TestMonitorHeaderFmt,
-    string TestPerMonitorConfirmFmt
+    string TestPerMonitorConfirmFmt,
+    string TestDarkMsg,
+    string TestWokeMsg,
+    string TestQSleep,
+    string TestQWake,
+    string TestYes,
+    string TestNo,
+    string TestRetry,
+    string TestNext
 );
 
 public static class Strings
@@ -111,7 +119,14 @@ public static class Strings
                 "Did it work correctly? Did every monitor go dark and then come back on?",
                 "This monitor will go dark now",
                 "Monitor {0} of {1}",
-                "Monitor {0}: did it go dark and then come back on correctly?"
+                "Monitor {0}: did it go dark and then come back on correctly?",
+                "Monitor is off — waking in",
+                "Monitor is back on",
+                "Did the monitor go to sleep correctly (go dark)?",
+                "Did the monitor wake correctly (come back on)?",
+                "Yes", "No",
+                "Retry with this method",
+                "Next monitor"
             ),
             ["ru"] = new(
                 "🇷🇺", "Русский",
@@ -157,7 +172,14 @@ public static class Strings
                 "Всё отработало правильно? Каждый монитор погас, а затем снова включился?",
                 "Сейчас данный монитор погаснет",
                 "Монитор {0} из {1}",
-                "Монитор {0}: он корректно погас, а затем снова включился?"
+                "Монитор {0}: он корректно погас, а затем снова включился?",
+                "Монитор погашен — пробуждение через",
+                "Монитор снова включён",
+                "Монитор корректно ушёл в сон (погас)?",
+                "Монитор корректно вышел из сна (включился)?",
+                "Да", "Нет",
+                "Повторить с этим методом",
+                "Следующий монитор"
             ),
             ["de"] = new(
                 "🇩🇪", "Deutsch",
@@ -203,7 +225,14 @@ public static class Strings
                 "Hat alles korrekt funktioniert? Wurde jeder Monitor dunkel und ging dann wieder an?",
                 "Dieser Monitor wird jetzt dunkel",
                 "Monitor {0} von {1}",
-                "Monitor {0}: Wurde er dunkel und ging dann korrekt wieder an?"
+                "Monitor {0}: Wurde er dunkel und ging dann korrekt wieder an?",
+                "Monitor ist aus — Aufwecken in",
+                "Monitor ist wieder an",
+                "Ist der Monitor korrekt in den Ruhezustand gegangen (dunkel)?",
+                "Ist der Monitor korrekt aufgewacht (wieder an)?",
+                "Ja", "Nein",
+                "Mit dieser Methode wiederholen",
+                "Nächster Monitor"
             ),
             ["fr"] = new(
                 "🇫🇷", "Français",
@@ -249,7 +278,14 @@ public static class Strings
                 "Tout a bien fonctionné ? Chaque moniteur s'est-il éteint puis rallumé ?",
                 "Ce moniteur va s'éteindre maintenant",
                 "Moniteur {0} sur {1}",
-                "Moniteur {0} : s'est-il éteint puis rallumé correctement ?"
+                "Moniteur {0} : s'est-il éteint puis rallumé correctement ?",
+                "Moniteur éteint — réveil dans",
+                "Moniteur rallumé",
+                "Le moniteur s'est-il éteint correctement (est-il devenu noir) ?",
+                "Le moniteur s'est-il rallumé correctement ?",
+                "Oui", "Non",
+                "Réessayer avec cette méthode",
+                "Moniteur suivant"
             ),
             ["es"] = new(
                 "🇪🇸", "Español",
@@ -295,7 +331,14 @@ public static class Strings
                 "¿Funcionó todo bien? ¿Cada monitor se apagó y luego volvió a encenderse?",
                 "Este monitor se apagará ahora",
                 "Monitor {0} de {1}",
-                "Monitor {0}: ¿se apagó y luego volvió a encenderse correctamente?"
+                "Monitor {0}: ¿se apagó y luego volvió a encenderse correctamente?",
+                "Monitor apagado — encendiendo en",
+                "Monitor encendido de nuevo",
+                "¿El monitor se apagó correctamente (se puso en negro)?",
+                "¿El monitor se encendió correctamente?",
+                "Sí", "No",
+                "Reintentar con este método",
+                "Siguiente monitor"
             ),
             ["it"] = new(
                 "🇮🇹", "Italiano",
@@ -341,7 +384,14 @@ public static class Strings
                 "Ha funzionato tutto correttamente? Ogni monitor si è spento e poi riacceso?",
                 "Questo monitor si spegnerà ora",
                 "Monitor {0} di {1}",
-                "Monitor {0}: si è spento e poi riacceso correttamente?"
+                "Monitor {0}: si è spento e poi riacceso correttamente?",
+                "Monitor spento — riattivazione tra",
+                "Monitor di nuovo acceso",
+                "Il monitor si è spento correttamente (è diventato nero)?",
+                "Il monitor si è riacceso correttamente?",
+                "Sì", "No",
+                "Riprova con questo metodo",
+                "Monitor successivo"
             ),
             ["pt"] = new(
                 "🇵🇹", "Português",
@@ -387,7 +437,14 @@ public static class Strings
                 "Funcionou corretamente? Cada monitor escureceu e depois voltou a ligar?",
                 "Este monitor vai apagar agora",
                 "Monitor {0} de {1}",
-                "Monitor {0}: escureceu e depois voltou a ligar corretamente?"
+                "Monitor {0}: escureceu e depois voltou a ligar corretamente?",
+                "Monitor desligado — ligando em",
+                "Monitor ligado novamente",
+                "O monitor apagou corretamente (ficou preto)?",
+                "O monitor ligou de novo corretamente?",
+                "Sim", "Não",
+                "Repetir com este método",
+                "Próximo monitor"
             ),
             ["pl"] = new(
                 "🇵🇱", "Polski",
@@ -433,7 +490,14 @@ public static class Strings
                 "Czy wszystko zadziałało poprawnie? Czy każdy monitor zgasł, a potem znów się włączył?",
                 "Ten monitor zaraz zgaśnie",
                 "Monitor {0} z {1}",
-                "Monitor {0}: czy zgasł, a potem poprawnie się włączył?"
+                "Monitor {0}: czy zgasł, a potem poprawnie się włączył?",
+                "Monitor wyłączony — wybudzanie za",
+                "Monitor znów włączony",
+                "Czy monitor poprawnie zasnął (zgasł)?",
+                "Czy monitor poprawnie się wybudził (włączył)?",
+                "Tak", "Nie",
+                "Powtórz tą metodą",
+                "Następny monitor"
             ),
             ["zh"] = new(
                 "🇨🇳", "中文",
@@ -479,7 +543,14 @@ public static class Strings
                 "一切正常吗？每台显示器是否先熄灭然后又重新亮起？",
                 "此显示器即将熄灭",
                 "显示器 {0} / {1}",
-                "显示器 {0}：它是否先熄灭然后又正确亮起？"
+                "显示器 {0}：它是否先熄灭然后又正确亮起？",
+                "显示器已关闭 — 唤醒倒计时",
+                "显示器已重新点亮",
+                "显示器是否正确进入睡眠（熄灭）？",
+                "显示器是否正确唤醒（重新亮起）？",
+                "是", "否",
+                "用此方法重试",
+                "下一台显示器"
             ),
         };
 }

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Drawing;
 using System.Windows.Forms;
 using PowerOffScreensaver.Localization;
@@ -12,6 +13,7 @@ public class SettingsForm : Form
     private AppSettings _settings;
     private readonly MonitorPowerController _powerController =
         new(new MonitorPowerService(), new DdcCiService());
+    private IReadOnlyDictionary<int, PowerOffMode> _perMonitorModes;
 
     private CheckBox _lockCheckBox = null!;
     private Label _methodLabel = null!;
@@ -37,6 +39,7 @@ public class SettingsForm : Form
     {
         _settingsService = new Services.SettingsService();
         _settings = _settingsService.Load();
+        _perMonitorModes = _settings.PerMonitorModes;
         Strings.Set(_settings.Language);
         InitializeUI();
         LoadSettings();
@@ -45,7 +48,7 @@ public class SettingsForm : Form
     private static string AppVersion()
     {
         var ver = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version;
-        return ver != null ? $"v{ver.Major}.{ver.Minor}" : "v1.9";
+        return ver != null ? $"v{ver.Major}.{ver.Minor}" : "v2.0";
     }
 
     private void InitializeUI()
@@ -220,9 +223,11 @@ public class SettingsForm : Form
 
     private void OpenMonitorTest()
     {
-        using var f = new MonitorTestForm(_powerController, CurrentMode());
+        using var f = new MonitorTestForm(_powerController, CurrentMode(), _perMonitorModes);
         f.ShowDialog(this);
-        SetModeCombo(f.SelectedMode); // reflect a method change made while testing
+        if (f.PerMonitorResult != null)
+            _perMonitorModes = f.PerMonitorResult; // per-monitor choices from the wizard
+        SetModeCombo(f.SelectedMode); // reflect the global method too
     }
 
     private void SaveSettings()
@@ -233,6 +238,7 @@ public class SettingsForm : Form
             LockOnExit = _lockCheckBox.Checked,
             DdcCiEnabled = mode is PowerOffMode.DdcCi or PowerOffMode.Both, // legacy mirror
             PowerOffMode = mode,
+            PerMonitorModes = _perMonitorModes,
             PowerOffDelayMs = (int)_delaySpinner.Value,
             Language = Strings.Current,
             Initialized = _settings.Initialized

@@ -32,6 +32,46 @@ public sealed class MonitorPowerController
         _ddc = ddc;
     }
 
+    /// <summary>
+    /// Power off according to settings: per-monitor overrides if present (each monitor
+    /// its own method), otherwise the single global mode.
+    /// </summary>
+    public void PowerOff(AppSettings settings)
+    {
+        if (settings.PerMonitorModes == null || settings.PerMonitorModes.Count == 0)
+        {
+            PowerOff(settings.PowerOffMode);
+            return;
+        }
+
+        bool anyDpms = false;
+        foreach (var kv in settings.PerMonitorModes)
+        {
+            var mode = kv.Value;
+            if (PowerPlan.UsesDdc(mode))
+            {
+                try { _ddc.PowerOne(kv.Key, false); } catch { }
+            }
+            if (mode is PowerOffMode.Dpms or PowerOffMode.Auto or PowerOffMode.Both)
+                anyDpms = true;
+        }
+        if (anyDpms)
+            _dpms.TryPowerOff();
+    }
+
+    /// <summary>Wake according to settings (verifies DDC panels when any monitor uses DDC/CI).</summary>
+    public WakeReport Wake(AppSettings settings)
+    {
+        if (settings.PerMonitorModes == null || settings.PerMonitorModes.Count == 0)
+            return Wake(settings.PowerOffMode);
+
+        bool anyDdc = false;
+        foreach (var m in settings.PerMonitorModes.Values)
+            if (PowerPlan.UsesDdc(m)) { anyDdc = true; break; }
+
+        return Wake(anyDdc ? PowerOffMode.DdcCi : PowerOffMode.Dpms);
+    }
+
     /// <summary>Power all monitors off using the chosen mode (auto-detecting DDC/CI support).</summary>
     public void PowerOff(PowerOffMode mode)
     {
@@ -127,6 +167,13 @@ public sealed class MonitorPowerController
 
     /// <summary>Enumerate physical monitors (for the settings test dialog).</summary>
     public IReadOnlyList<MonitorProbe> Probe() => SafeProbe();
+
+    /// <summary>Enumerate physical monitors with screen bounds (for the per-monitor test).</summary>
+    public IReadOnlyList<MonitorInfo> Inventory()
+    {
+        try { return _ddc.Inventory(); }
+        catch { return Array.Empty<MonitorInfo>(); }
+    }
 
     /// <summary>Probe a single monitor by index (for the per-monitor test).</summary>
     public MonitorProbe? ProbeOne(int index)

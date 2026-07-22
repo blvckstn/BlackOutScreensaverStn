@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace PowerOffScreensaver;
 
@@ -25,6 +26,10 @@ public record AppSettings
     // DPMS by default: it always wakes on input. DDC/CI hard-off can strand some
     // monitors (the DDC bus dies when off), so it is opt-in via the settings/test.
     public PowerOffMode PowerOffMode { get; init; } = PowerOffMode.Dpms;
+    // Optional per-monitor override (key = monitor index from the test). When set, it
+    // is authoritative for power-off; empty means use the global PowerOffMode.
+    public IReadOnlyDictionary<int, PowerOffMode> PerMonitorModes { get; init; }
+        = new Dictionary<int, PowerOffMode>();
     public int PowerOffDelayMs { get; init; } = 500;
     public string Language { get; init; } = "en";
     public bool Initialized { get; init; } = false;
@@ -32,6 +37,34 @@ public record AppSettings
     public static AppSettings CreateDefaults()
     {
         return new AppSettings();
+    }
+
+    // The default record equality would compare PerMonitorModes by reference (a
+    // Dictionary), so two otherwise-equal instances would differ. Compare it by content.
+    public virtual bool Equals(AppSettings? other)
+    {
+        if (other is null) return false;
+        if (ReferenceEquals(this, other)) return true;
+        return LockOnExit == other.LockOnExit
+            && DdcCiEnabled == other.DdcCiEnabled
+            && PowerOffMode == other.PowerOffMode
+            && PowerOffDelayMs == other.PowerOffDelayMs
+            && Language == other.Language
+            && Initialized == other.Initialized
+            && DictEquals(PerMonitorModes, other.PerMonitorModes);
+    }
+
+    public override int GetHashCode() =>
+        HashCode.Combine(LockOnExit, DdcCiEnabled, PowerOffMode, PowerOffDelayMs, Language, Initialized);
+
+    private static bool DictEquals(
+        IReadOnlyDictionary<int, PowerOffMode> a, IReadOnlyDictionary<int, PowerOffMode> b)
+    {
+        if (ReferenceEquals(a, b)) return true;
+        if (a is null || b is null || a.Count != b.Count) return false;
+        foreach (var kv in a)
+            if (!b.TryGetValue(kv.Key, out var v) || v != kv.Value) return false;
+        return true;
     }
 
     public AppSettings WithLockOnExit(bool value) => this with { LockOnExit = value };

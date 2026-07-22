@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -55,6 +56,7 @@ public class SettingsService : ISettingsService
                 LockOnExit = lockOnExit,
                 DdcCiEnabled = ddcCiEnabled,
                 PowerOffMode = powerOffMode,
+                PerMonitorModes = ParsePerMonitorModes(root),
                 PowerOffDelayMs = powerOffDelayMs,
                 Language = language,
                 Initialized = initialized
@@ -83,6 +85,26 @@ public class SettingsService : ISettingsService
         }
         // Absent → DPMS (wake-safe default). Legacy ddcCiEnabled=true keeps DDC (Both).
         return legacyDdcCiEnabled ? PowerOffMode.Both : PowerOffMode.Dpms;
+    }
+
+    /// <summary>Reads the optional per-monitor override map (index → mode).</summary>
+    internal static IReadOnlyDictionary<int, PowerOffMode> ParsePerMonitorModes(JsonElement root)
+    {
+        var dict = new Dictionary<int, PowerOffMode>();
+        if (root.TryGetProperty("perMonitorModes", out var el) && el.ValueKind == JsonValueKind.Object)
+        {
+            foreach (var prop in el.EnumerateObject())
+            {
+                if (!int.TryParse(prop.Name, out var idx)) continue;
+                if (prop.Value.ValueKind == JsonValueKind.String &&
+                    Enum.TryParse<PowerOffMode>(prop.Value.GetString(), ignoreCase: true, out var m))
+                    dict[idx] = m;
+                else if (prop.Value.ValueKind == JsonValueKind.Number &&
+                         Enum.IsDefined(typeof(PowerOffMode), prop.Value.GetInt32()))
+                    dict[idx] = (PowerOffMode)prop.Value.GetInt32();
+            }
+        }
+        return dict;
     }
 
     public void Save(AppSettings settings)

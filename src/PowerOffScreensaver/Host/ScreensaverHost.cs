@@ -110,7 +110,7 @@ public class ScreensaverHost : ApplicationContext
         var delay = _settings.PowerOffDelayMs;
         new System.Threading.Timer(_ =>
         {
-            _powerController.PowerOff(_settings.PowerOffMode);
+            _powerController.PowerOff(_settings);
         }, null, delay, System.Threading.Timeout.Infinite);
     }
 
@@ -125,7 +125,7 @@ public class ScreensaverHost : ApplicationContext
 
         // Bring every monitor back to a working state (and, for DDC/CI, confirm it)
         // BEFORE we lock, so we never switch to the secure desktop while a panel sleeps.
-        var wake = _powerController.Wake(_settings.PowerOffMode);
+        var wake = _powerController.Wake(_settings);
         Services.WakeLog.Write(wake);
 
         if (_settings.LockOnExit)
