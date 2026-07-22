@@ -20,7 +20,6 @@ public class SettingsForm : Form
     private NumericUpDown _delaySpinner = null!;
     private Label _delayLabel = null!;
     private Label _versionLabel = null!;
-    private Button _testButton = null!;
     private Button _checkButton = null!;
     private Button _okButton = null!;
     private Button _cancelButton = null!;
@@ -46,12 +45,12 @@ public class SettingsForm : Form
     private static string AppVersion()
     {
         var ver = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version;
-        return ver != null ? $"v{ver.Major}.{ver.Minor}" : "v1.8";
+        return ver != null ? $"v{ver.Major}.{ver.Minor}" : "v1.9";
     }
 
     private void InitializeUI()
     {
-        ClientSize = new Size(500, 300);
+        ClientSize = new Size(520, 296);
         StartPosition = FormStartPosition.CenterScreen;
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MaximizeBox = false;
@@ -60,7 +59,7 @@ public class SettingsForm : Form
         // ── Language row ────────────────────────────────────────
         var globeLabel = new Label
         {
-            Text = "🌐", Left = 20, Top = 18, Width = 26, Height = 24,
+            Text = "🌐", Left = 20, Top = 20, Width = 26, Height = 24,
             TextAlign = ContentAlignment.MiddleCenter,
             Font = new Font(Font.FontFamily, 11f)
         };
@@ -68,7 +67,7 @@ public class SettingsForm : Form
 
         _langCombo = new ComboBox
         {
-            Left = 50, Top = 16, Width = 180,
+            Left = 52, Top = 18, Width = 220,
             DropDownStyle = ComboBoxStyle.DropDownList
         };
         foreach (var code in LangOrder)
@@ -77,68 +76,58 @@ public class SettingsForm : Form
         _langCombo.SelectedIndexChanged += OnLangChanged;
         Controls.Add(_langCombo);
 
-        Controls.Add(MakeSep(50));
+        Controls.Add(MakeSep(56));
 
         // ── Lock checkbox ────────────────────────────────────────
         _lockCheckBox = new CheckBox
-            { Left = 20, Top = 58, Width = 460, Height = 22, AutoSize = false };
+            { Left = 24, Top = 68, Width = 472, Height = 22, AutoSize = false };
         Controls.Add(_lockCheckBox);
 
-        // ── Monitor power-off method row ─────────────────────────
+        // ── Monitor power-off method row (label + wide combo, no overlap) ─
         _methodLabel = new Label
         {
-            Left = 20, Top = 90, Width = 180, Height = 24,
+            Left = 24, Top = 102, Width = 220, Height = 24,
             TextAlign = ContentAlignment.MiddleLeft
         };
         Controls.Add(_methodLabel);
 
         _modeCombo = new ComboBox
         {
-            Left = 176, Top = 88, Width = 170,
+            Left = 250, Top = 99, Width = 246,
             DropDownStyle = ComboBoxStyle.DropDownList
         };
         Controls.Add(_modeCombo);
 
-        _testMonitorsButton = new Button
-        {
-            Left = 352, Top = 87, Width = 128, Height = 26,
-            UseVisualStyleBackColor = true
-        };
-        _testMonitorsButton.Click += (_, _) => OpenMonitorTest();
-        Controls.Add(_testMonitorsButton);
-
-        Controls.Add(MakeSep(122));
-
         // ── Delay row ────────────────────────────────────────────
         _delayLabel = new Label
         {
-            Left = 20, Top = 130, Width = 308, Height = 22,
+            Left = 24, Top = 138, Width = 300, Height = 22,
             TextAlign = ContentAlignment.MiddleLeft
         };
         _delaySpinner = new NumericUpDown
-            { Left = 338, Top = 129, Width = 140, Minimum = 0, Maximum = 5000, Value = 500 };
+            { Left = 400, Top = 136, Width = 96, Minimum = 0, Maximum = 5000, Value = 500 };
         Controls.Add(_delayLabel);
         Controls.Add(_delaySpinner);
 
-        Controls.Add(MakeSep(165));
+        Controls.Add(MakeSep(174));
 
         // ── Version label ────────────────────────────────────────
         _versionLabel = new Label
         {
-            Left = 20, Top = 173, Width = 460, Height = 16,
+            Left = 24, Top = 182, Width = 472, Height = 16,
             ForeColor = SystemColors.GrayText,
             Font = new Font(Font.FontFamily, 7.5f)
         };
         Controls.Add(_versionLabel);
 
-        // ── Buttons ──────────────────────────────────────────────
-        _testButton = new Button
-            { Left = 15, Top = 200, Width = 104, Height = 34, UseVisualStyleBackColor = true };
-        _testButton.Click += (_, _) => LaunchScreensaver();
-        Controls.Add(_testButton);
+        // ── Buttons: secondary on the left, OK/Cancel bottom-right ───────
+        _testMonitorsButton = new Button
+            { Left = 24, Top = 210, Width = 140, Height = 34, UseVisualStyleBackColor = true };
+        _testMonitorsButton.Click += (_, _) => OpenMonitorTest();
+        Controls.Add(_testMonitorsButton);
 
         _checkButton = new Button
-            { Left = 126, Top = 200, Width = 126, Height = 34, UseVisualStyleBackColor = true };
+            { Left = 172, Top = 210, Width = 110, Height = 34, UseVisualStyleBackColor = true };
         _checkButton.Click += (_, _) =>
         {
             using var diag = new DiagnosticsForm(firstRun: false);
@@ -148,7 +137,7 @@ public class SettingsForm : Form
 
         _okButton = new Button
         {
-            Left = 268, Top = 200, Width = 96, Height = 34,
+            Left = 300, Top = 210, Width = 96, Height = 34,
             DialogResult = DialogResult.OK,
             UseVisualStyleBackColor = true
         };
@@ -156,7 +145,7 @@ public class SettingsForm : Form
         Controls.Add(_okButton);
 
         _cancelButton = new Button
-            { Left = 372, Top = 200, Width = 110, Height = 34, UseVisualStyleBackColor = true };
+            { Left = 404, Top = 210, Width = 92, Height = 34, UseVisualStyleBackColor = true };
         _cancelButton.Click += (_, _) => Close();
         Controls.Add(_cancelButton);
 
@@ -167,7 +156,7 @@ public class SettingsForm : Form
     }
 
     private static Label MakeSep(int top) =>
-        new() { Left = 0, Top = top, Width = 500, Height = 1, BorderStyle = BorderStyle.Fixed3D };
+        new() { Left = 0, Top = top, Width = 520, Height = 1, BorderStyle = BorderStyle.Fixed3D };
 
     private void ApplyLocalization()
     {
@@ -177,7 +166,6 @@ public class SettingsForm : Form
         _methodLabel.Text = s.PowerMethodLabel;
         _delayLabel.Text = s.DelayMs;
         _versionLabel.Text = $"{s.VersionPrefix} {AppVersion()}";
-        _testButton.Text = s.TestBtn;
         _checkButton.Text = s.CheckBtn;
         _testMonitorsButton.Text = s.TestMonitorsBtn;
         _okButton.Text = s.OkBtn;
@@ -251,12 +239,5 @@ public class SettingsForm : Form
         };
         _settingsService.Save(_settings);
         Close();
-    }
-
-    private void LaunchScreensaver()
-    {
-        var exe = System.Diagnostics.Process.GetCurrentProcess().MainModule?.FileName;
-        if (exe != null)
-            System.Diagnostics.Process.Start(exe, "/s");
     }
 }

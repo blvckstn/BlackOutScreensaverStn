@@ -49,21 +49,25 @@ public sealed class DdcCiService : IDdcCiService
         public string szPhysicalMonitorDescription;
     }
 
-    public DdcResult PowerAll(bool on)
+    public DdcResult PowerAll(bool on) => SetPower(on, onlyIndex: null);
+
+    /// <summary>Set power on a single physical monitor, addressed by its Probe() index.</summary>
+    public DdcResult PowerOne(int index, bool on) => SetPower(on, onlyIndex: index);
+
+    private DdcResult SetPower(bool on, int? onlyIndex)
     {
         uint value = on ? POWER_ON : POWER_OFF;
-        return ForEachPhysical(pm =>
+        return ForEachPhysical((pm, _) =>
         {
             try { return SetVCPFeature(pm.hPhysicalMonitor, VCP_POWER, value); }
             catch { return false; }
-        });
+        }, onlyIndex);
     }
 
     public IReadOnlyList<MonitorProbe> Probe()
     {
         var probes = new List<MonitorProbe>();
-        int index = 0;
-        ForEachPhysical(pm =>
+        ForEachPhysical((pm, idx) =>
         {
             bool supports;
             DdcPowerState state = DdcPowerState.Unknown;
@@ -83,10 +87,18 @@ public sealed class DdcCiService : IDdcCiService
             }
             catch { supports = false; }
 
-            probes.Add(new MonitorProbe(index++, Describe(pm.szPhysicalMonitorDescription, index), supports, state));
+            probes.Add(new MonitorProbe(idx, Describe(pm.szPhysicalMonitorDescription, idx + 1), supports, state));
             return supports;
-        });
+        }, null);
         return probes;
+    }
+
+    /// <summary>Probe a single physical monitor by its Probe() index.</summary>
+    public MonitorProbe? ProbeOne(int index)
+    {
+        foreach (var p in Probe())
+            if (p.Index == index) return p;
+        return null;
     }
 
     private static string Describe(string? raw, int index) =>
@@ -97,9 +109,9 @@ public sealed class DdcCiService : IDdcCiService
     /// and always releases the handles. Any native failure is swallowed so one bad
     /// monitor never aborts the sweep.
     /// </summary>
-    private DdcResult ForEachPhysical(Func<PHYSICAL_MONITOR, bool> action)
+    private DdcResult ForEachPhysical(Func<PHYSICAL_MONITOR, int, bool> action, int? onlyIndex)
     {
-        int total = 0, ok = 0;
+        int total = 0, ok = 0, index = 0;
         List<IntPtr> hmonitors;
         try
         {
@@ -127,8 +139,10 @@ public sealed class DdcCiService : IDdcCiService
 
                 foreach (var pm in arr)
                 {
+                    int current = index++;
+                    if (onlyIndex.HasValue && onlyIndex.Value != current) continue;
                     total++;
-                    if (action(pm)) ok++;
+                    if (action(pm, current)) ok++;
                 }
             }
             catch
@@ -161,5 +175,7 @@ public sealed class DdcCiService : IDdcCiService
 public sealed class NullDdcCiService : IDdcCiService
 {
     public IReadOnlyList<MonitorProbe> Probe() => Array.Empty<MonitorProbe>();
+    public MonitorProbe? ProbeOne(int index) => null;
     public DdcResult PowerAll(bool on) => new(0, 0);
+    public DdcResult PowerOne(int index, bool on) => new(0, 0);
 }

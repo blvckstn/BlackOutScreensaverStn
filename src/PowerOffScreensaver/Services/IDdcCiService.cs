@@ -26,6 +26,12 @@ public interface IDdcCiService
     /// <summary>Enumerate physical monitors with DDC/CI support and current power state.</summary>
     IReadOnlyList<MonitorProbe> Probe();
 
+    /// <summary>Probe a single physical monitor by its <see cref="Probe"/> index.</summary>
+    MonitorProbe? ProbeOne(int index);
+
     /// <summary>Set power on (true) or off (false) on every physical monitor.</summary>
     DdcResult PowerAll(bool on);
+
+    /// <summary>Set power on a single physical monitor, addressed by its <see cref="Probe"/> index.</summary>
+    DdcResult PowerOne(int index, bool on);
 }

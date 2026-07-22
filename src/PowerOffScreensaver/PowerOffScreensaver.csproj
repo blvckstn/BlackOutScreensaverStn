@@ -11,9 +11,9 @@
     <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
     <Platforms>x64</Platforms>
     <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
-    <Version>1.8</Version>
-    <AssemblyVersion>1.8.0.0</AssemblyVersion>
-    <FileVersion>1.8.0.0</FileVersion>
+    <Version>1.9</Version>
+    <AssemblyVersion>1.9.0.0</AssemblyVersion>
+    <FileVersion>1.9.0.0</FileVersion>
     <Product>Blackout ScreenSaver</Product>
     <AssemblyTitle>Blackout ScreenSaver</AssemblyTitle>
     <Description>Blackout ScreenSaver (BOSS) — multi-monitor blackout and power-off screensaver with guaranteed lock.</Description>
