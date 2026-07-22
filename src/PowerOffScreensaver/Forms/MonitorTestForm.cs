@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Drawing;
-using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using PowerOffScreensaver.Localization;
@@ -10,45 +9,53 @@ using PowerOffScreensaver.Services;
 namespace PowerOffScreensaver;
 
 /// <summary>
-/// Per-monitor power-off test. Steps through each monitor one at a time: a 5-second
-/// "this monitor will go dark now" countdown, then powers that monitor off, waits so
-/// the user can watch, powers everything back on, and asks the user to confirm this
-/// specific monitor darkened and came back. Lets the user find which method each
-/// monitor responds to.
+/// Per-monitor test wizard. Numbers every monitor (1..N) with an on-screen badge,
+/// then steps through them one at a time: a big movable window appears on the
+/// monitor with a 5-second "this monitor will go dark" countdown, the monitor is
+/// powered off, a 15-second countdown runs while it is dark, it is woken, and the
+/// user answers two questions (did it sleep / wake correctly). On "no" the user can
+/// change the method for that monitor and retry until it works. Choices are saved
+/// per monitor.
 /// </summary>
 public sealed class MonitorTestForm : Form
 {
-    private static readonly PowerOffMode[] ModeOrder =
-        { PowerOffMode.Dpms, PowerOffMode.Auto, PowerOffMode.DdcCi, PowerOffMode.Both, PowerOffMode.None };
-
-    private const int CountdownSeconds = 5;
-    private const int DarkDwellMs = 4000;
+    private const int WarnSeconds = 5;
+    private const int DarkSeconds = 15;
 
     private readonly MonitorPowerController _controller;
+    private readonly PowerOffMode _initialMode;
+    private readonly Dictionary<int, PowerOffMode> _perMonitor = new();
+    private readonly List<MonitorNumberOverlay> _overlays = new();
+    private IReadOnlyList<MonitorInfo> _inventory = Array.Empty<MonitorInfo>();
 
-    private ComboBox _modeCombo = null!;
-    private Label _headerLabel = null!;
-    private Label _countdownLabel = null!;
     private ListView _list = null!;
     private Label _statusLabel = null!;
-    private Button _runButton = null!;
+    private Button _startButton = null!;
     private Button _closeButton = null!;
     private bool _running;
 
+    /// <summary>Global method the user ended on (for the settings combo).</summary>
     public PowerOffMode SelectedMode { get; private set; }
 
-    public MonitorTestForm(MonitorPowerController controller, PowerOffMode initialMode)
+    /// <summary>Per-monitor result, or null if the wizard was not completed.</summary>
+    public IReadOnlyDictionary<int, PowerOffMode>? PerMonitorResult { get; private set; }
+
+    public MonitorTestForm(MonitorPowerController controller, PowerOffMode initialMode,
+        IReadOnlyDictionary<int, PowerOffMode>? currentPerMonitor = null)
     {
         _controller = controller;
+        _initialMode = initialMode;
         SelectedMode = initialMode;
-        InitializeUI(initialMode);
+        if (currentPerMonitor != null)
+            foreach (var kv in currentPerMonitor) _perMonitor[kv.Key] = kv.Value;
+        InitializeUI();
     }
 
-    private void InitializeUI(PowerOffMode initialMode)
+    private void InitializeUI()
     {
         var s = Strings.Get();
         Text = s.TestTitle;
-        ClientSize = new Size(560, 470);
+        ClientSize = new Size(620, 462);
         StartPosition = FormStartPosition.CenterParent;
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MaximizeBox = false;
@@ -57,65 +64,28 @@ public sealed class MonitorTestForm : Form
         Controls.Add(new Label
         {
             Text = s.TestIntro,
-            Left = 20, Top = 14, Width = 520, Height = 34,
+            Left = 20, Top = 14, Width = 580, Height = 34,
             ForeColor = SystemColors.GrayText,
             Font = new Font(Font.FontFamily, 8.5f)
         });
 
-        Controls.Add(new Label
-        {
-            Text = s.PowerMethodLabel,
-            Left = 20, Top = 58, Width = 230, Height = 24,
-            TextAlign = ContentAlignment.MiddleLeft
-        });
-        _modeCombo = new ComboBox
-        {
-            Left = 256, Top = 55, Width = 264,
-            DropDownStyle = ComboBoxStyle.DropDownList
-        };
-        _modeCombo.Items.AddRange(new object[] { s.ModeDpms, s.ModeAuto, s.ModeDdcCi, s.ModeBoth, s.ModeNone });
-        _modeCombo.SelectedIndex = Math.Max(0, Array.IndexOf(ModeOrder, initialMode));
-        _modeCombo.SelectedIndexChanged += (_, _) =>
-        {
-            var i = _modeCombo.SelectedIndex;
-            if (i >= 0 && i < ModeOrder.Length) SelectedMode = ModeOrder[i];
-        };
-        Controls.Add(_modeCombo);
-
-        _headerLabel = new Label
-        {
-            Left = 20, Top = 92, Width = 520, Height = 24,
-            Font = new Font(Font.FontFamily, 10.5f, FontStyle.Bold),
-            TextAlign = ContentAlignment.MiddleLeft
-        };
-        Controls.Add(_headerLabel);
-
-        _countdownLabel = new Label
-        {
-            Left = 20, Top = 118, Width = 520, Height = 42,
-            Font = new Font(Font.FontFamily, 15f, FontStyle.Bold),
-            ForeColor = Color.FromArgb(180, 90, 0),
-            TextAlign = ContentAlignment.MiddleLeft
-        };
-        Controls.Add(_countdownLabel);
-
         _list = new ListView
         {
-            Left = 20, Top = 168, Width = 520, Height = 176,
-            View = View.Details,
-            FullRowSelect = true,
-            GridLines = true,
+            Left = 20, Top = 54, Width = 580, Height = 262,
+            View = View.Details, FullRowSelect = true, GridLines = true,
             HeaderStyle = ColumnHeaderStyle.Nonclickable
         };
-        _list.Columns.Add(s.ColMonitor, 300);
-        _list.Columns.Add(s.ColDdc, 80);
-        _list.Columns.Add(s.ColResult, 130);
+        _list.Columns.Add("№", 44);
+        _list.Columns.Add(s.ColMonitor, 236);
+        _list.Columns.Add(s.ColDdc, 70);
+        _list.Columns.Add(s.PowerMethodLabel.TrimEnd(':', ' '), 110);
+        _list.Columns.Add(s.ColResult, 110);
         Controls.Add(_list);
 
         _statusLabel = new Label
         {
-            Left = 20, Top = 352, Width = 520, Height = 20,
-            Font = new Font(Font.FontFamily, 9f, FontStyle.Bold),
+            Left = 20, Top = 324, Width = 580, Height = 40,
+            Font = new Font(Font.FontFamily, 11f, FontStyle.Bold),
             TextAlign = ContentAlignment.MiddleLeft
         };
         Controls.Add(_statusLabel);
@@ -123,126 +93,156 @@ public sealed class MonitorTestForm : Form
         Controls.Add(new Label
         {
             Text = s.TestHint,
-            Left = 20, Top = 376, Width = 520, Height = 36,
+            Left = 20, Top = 368, Width = 580, Height = 34,
             ForeColor = SystemColors.GrayText,
             Font = new Font(Font.FontFamily, 8.5f)
         });
 
-        _runButton = new Button
+        _startButton = new Button
         {
-            Text = s.TestRunBtn,
-            Left = 20, Top = 420, Width = 220, Height = 34,
+            Text = s.TestRunBtn, Left = 20, Top = 412, Width = 240, Height = 34,
             UseVisualStyleBackColor = true
         };
-        _runButton.Click += async (_, _) => await RunTestAsync();
-        Controls.Add(_runButton);
+        _startButton.Click += async (_, _) => await RunWizardAsync();
+        Controls.Add(_startButton);
 
         _closeButton = new Button
         {
-            Text = s.DiagClose,
-            Left = 428, Top = 420, Width = 92, Height = 34,
+            Text = s.DiagClose, Left = 508, Top = 412, Width = 92, Height = 34,
             UseVisualStyleBackColor = true
         };
         _closeButton.Click += (_, _) => Close();
         Controls.Add(_closeButton);
         CancelButton = _closeButton;
 
-        Load += (_, _) => PopulateMonitors();
+        Load += (_, _) => Populate();
+        FormClosed += (_, _) => ClearOverlays();
     }
 
-    private IReadOnlyList<MonitorProbe> PopulateMonitors()
+    private void Populate()
     {
+        var s = Strings.Get();
+        _inventory = _controller.Inventory();
+        ClearOverlays();
         _list.Items.Clear();
-        var probes = _controller.Probe();
-        foreach (var p in probes)
+
+        for (int i = 0; i < _inventory.Count; i++)
         {
-            var item = new ListViewItem(p.Description);
-            item.SubItems.Add(p.SupportsPower ? "✓" : "—");
+            var info = _inventory[i];
+            string number = (i + 1).ToString();
+
+            var overlay = new MonitorNumberOverlay(info.Bounds, number);
+            overlay.Show();
+            _overlays.Add(overlay);
+
+            var mode = _perMonitor.TryGetValue(i, out var m) ? m : _initialMode;
+            var item = new ListViewItem(number);
+            item.SubItems.Add(info.Description);
+            item.SubItems.Add(info.SupportsDdc ? "✓" : "—");
+            item.SubItems.Add(ModeName(mode, s));
             item.SubItems.Add("");
             item.UseItemStyleForSubItems = false;
             _list.Items.Add(item);
         }
-        return probes;
+
+        _statusLabel.Text = _inventory.Count == 0 ? "—" : "";
     }
 
-    private async Task RunTestAsync()
+    private async Task RunWizardAsync()
     {
-        if (_running) return;
+        if (_running || _inventory.Count == 0) return;
         _running = true;
         SetBusy(true);
         var s = Strings.Get();
-        var mode = SelectedMode;
 
         try
         {
-            var probes = PopulateMonitors();
-            if (probes.Count == 0)
+            for (int i = 0; i < _inventory.Count; i++)
             {
-                _statusLabel.Text = "—";
-                return;
-            }
+                var info = _inventory[i];
+                string number = (i + 1).ToString();
+                string header = string.Format(s.TestMonitorHeaderFmt, number, _inventory.Count);
+                var mode = _perMonitor.TryGetValue(i, out var m0) ? m0 : _initialMode;
 
-            // "Black screen only" never powers monitors off — nothing to test.
-            if (mode == PowerOffMode.None)
-            {
-                _headerLabel.Text = s.ModeNone;
-                _countdownLabel.Text = "";
-                _statusLabel.Text = "—";
-                _statusLabel.ForeColor = SystemColors.GrayText;
-                return;
-            }
-
-            int confirmed = 0;
-            for (int i = 0; i < probes.Count; i++)
-            {
-                HighlightRow(i);
-                _headerLabel.Text = $"{string.Format(s.TestMonitorHeaderFmt, i + 1, probes.Count)} — {probes[i].Description}";
-
-                // 5-second warning countdown so the user can watch this monitor.
-                for (int c = CountdownSeconds; c >= 1; c--)
+                bool done = false;
+                while (!done)
                 {
-                    _countdownLabel.Text = $"{s.TestMonitorCountdown}   {c}";
-                    await Task.Delay(1000);
+                    HighlightRow(i);
+
+                    // 5-second warning ON the target monitor.
+                    using (var prompt = new MonitorTestPrompt(info.Bounds))
+                    {
+                        prompt.Show();
+                        for (int c = WarnSeconds; c >= 1; c--)
+                        {
+                            prompt.SetPhase(header, s.TestMonitorCountdown, c.ToString(), Color.FromArgb(255, 170, 60));
+                            _statusLabel.Text = $"{header} — {s.TestMonitorCountdown}  {c}";
+                            _statusLabel.ForeColor = Color.FromArgb(180, 90, 0);
+                            await Task.Delay(1000);
+                        }
+                        prompt.Close();
+                    }
+
+                    // Power this monitor off, keep it dark for the countdown.
+                    await Task.Run(() => _controller.PowerOffOne(i, mode));
+                    for (int c = DarkSeconds; c >= 1; c--)
+                    {
+                        _statusLabel.Text = $"{header} — {s.TestDarkMsg}  {c}";
+                        _statusLabel.ForeColor = SystemColors.GrayText;
+                        await Task.Delay(1000);
+                    }
+
+                    // Wake everything back, then ask about this monitor.
+                    await Task.Run(() => _controller.Wake(mode));
+                    _statusLabel.Text = $"{header} — {s.TestWokeMsg}";
+                    _statusLabel.ForeColor = Color.FromArgb(0, 140, 60);
+
+                    using var dlg = new MonitorTestResultDialog(header, mode);
+                    dlg.ShowDialog(this);
+
+                    if (dlg.Decision == TestDecision.Retry)
+                    {
+                        mode = dlg.SelectedMode; // try again with a different method
+                        continue;
+                    }
+
+                    // Accept and move on.
+                    mode = dlg.SelectedMode;
+                    _perMonitor[i] = mode;
+                    SetRow(i, dlg.SleptOk && dlg.WokeOk, mode, s);
+                    done = true;
                 }
-
-                // Power this monitor off (DDC targets it; DPMS is global), let it stay dark.
-                await Task.Run(() => _controller.PowerOffOne(i, mode));
-                _countdownLabel.Text = "●";
-                await Task.Delay(DarkDwellMs);
-
-                var probe = await Task.Run(() => _controller.ProbeOne(i));
-
-                // Bring everything back safely, then ask about this specific monitor.
-                await Task.Run(() => _controller.Wake(mode));
-                _countdownLabel.Text = "";
-
-                var q = string.Format(s.TestPerMonitorConfirmFmt, i + 1);
-                var ans = MessageBox.Show(this, q, _headerLabel.Text,
-                    MessageBoxButtons.YesNo, MessageBoxIcon.Question);
-
-                bool ok = ans == DialogResult.Yes;
-                if (ok) confirmed++;
-                SetRowResult(i, ok, probe, s);
             }
 
-            _headerLabel.Text = "";
-            _statusLabel.Text = $"{(confirmed == probes.Count ? "✓" : "⚠")}  {confirmed}/{probes.Count}";
-            _statusLabel.ForeColor = confirmed == probes.Count
-                ? Color.FromArgb(0, 140, 60)
-                : Color.FromArgb(180, 90, 0);
+            PerMonitorResult = new Dictionary<int, PowerOffMode>(_perMonitor);
+            // Global fallback = the most-used per-monitor mode (or unchanged).
+            SelectedMode = MostCommonMode() ?? SelectedMode;
+            _statusLabel.Text = "✓";
+            _statusLabel.ForeColor = Color.FromArgb(0, 140, 60);
         }
         catch (Exception ex)
         {
             _statusLabel.Text = ex.Message;
             _statusLabel.ForeColor = Color.FromArgb(180, 30, 30);
-            try { await Task.Run(() => _controller.Wake(SelectedMode)); } catch { }
+            try { await Task.Run(() => _controller.Wake(_initialMode)); } catch { }
         }
         finally
         {
-            _countdownLabel.Text = "";
             _running = false;
             SetBusy(false);
         }
+    }
+
+    private PowerOffMode? MostCommonMode()
+    {
+        if (_perMonitor.Count == 0) return null;
+        var counts = new Dictionary<PowerOffMode, int>();
+        foreach (var v in _perMonitor.Values)
+            counts[v] = counts.TryGetValue(v, out var c) ? c + 1 : 1;
+        PowerOffMode best = _initialMode; int bestC = -1;
+        foreach (var kv in counts)
+            if (kv.Value > bestC) { best = kv.Key; bestC = kv.Value; }
+        return best;
     }
 
     private void HighlightRow(int i)
@@ -253,19 +253,36 @@ public sealed class MonitorTestForm : Form
         _list.Items[i].EnsureVisible();
     }
 
-    private void SetRowResult(int i, bool userConfirmed, MonitorProbe? probe, LangStrings s)
+    private void SetRow(int i, bool ok, PowerOffMode mode, LangStrings s)
     {
         if (i < 0 || i >= _list.Items.Count) return;
-        string text = userConfirmed ? s.ResultOff : s.ResultOn; // "went dark" vs "stayed on"
-        Color color = userConfirmed ? Color.FromArgb(0, 140, 60) : Color.FromArgb(180, 30, 30);
-        _list.Items[i].SubItems[2].Text = (userConfirmed ? "✓ " : "✗ ") + text;
-        _list.Items[i].SubItems[2].ForeColor = color;
+        _list.Items[i].SubItems[3].Text = ModeName(mode, s);
+        _list.Items[i].SubItems[4].Text = (ok ? "✓ " : "✗ ") + (ok ? s.TestYes : s.TestNo);
+        _list.Items[i].SubItems[4].ForeColor = ok ? Color.FromArgb(0, 140, 60) : Color.FromArgb(180, 30, 30);
     }
+
+    private static string ModeName(PowerOffMode mode, LangStrings s) => mode switch
+    {
+        PowerOffMode.Dpms => s.ModeDpms,
+        PowerOffMode.Auto => s.ModeAuto,
+        PowerOffMode.DdcCi => s.ModeDdcCi,
+        PowerOffMode.Both => s.ModeBoth,
+        PowerOffMode.None => s.ModeNone,
+        _ => s.ModeDpms
+    };
 
     private void SetBusy(bool busy)
     {
-        _runButton.Enabled = !busy;
-        _modeCombo.Enabled = !busy;
+        _startButton.Enabled = !busy;
         _closeButton.Enabled = !busy;
+    }
+
+    private void ClearOverlays()
+    {
+        foreach (var o in _overlays)
+        {
+            try { o.Close(); o.Dispose(); } catch { }
+        }
+        _overlays.Clear();
     }
 }

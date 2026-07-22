@@ -76,15 +76,23 @@ DPMS (`SC_MONITORPOWER`) — глобальный запрос, NVIDIA/AMD пр�
   `SystemEvents.DisplaySettingsChanged` и пересоздаёт чёрные окна под текущие мониторы
   (иначе после hot‑unplug DP на боковых виден рабочий стол). Power‑off повторно НЕ шлём
   (чтобы не зациклить hot‑unplug) — только перекрываем.
-- Тест в настройках (`MonitorTestForm`, feature 007) — ПОШАГОВЫЙ по каждому монитору:
-  для каждого 5‑сек отсчёт «Сейчас данный монитор погаснет» → выключает ЭТОТ монитор
-  (`DdcCiService.PowerOne`/`MonitorPowerController.PowerOffOne`; DDC точечно, DPMS
-  глобально) → держит тёмным → будит всё → спрашивает Yes/No по этому монитору.
-  Так видно, какой монитор на какой метод откликается. DDC per‑monitor через
-  `ForEachPhysical(action, onlyIndex)`.
-- UX настроек (feature 007): исправлена вёрстка (комбо не наезжает на подпись),
-  убрана дублирующая кнопка «Тест», «Тест мониторов…» и «Проверить» слева,
-  ОК/Отмена — справа снизу.
+- Тест в настройках (`MonitorTestForm`, feature 007/008) — МАСТЕР по каждому монитору:
+  - `DdcCiService.Inventory()` даёт index+bounds+DDC каждого монитора (все обычно
+    «Generic PnP Monitor», поэтому нумеруем 1..N по позиции экрана).
+  - `MonitorNumberOverlay` — бейдж с номером на каждом мониторе (опознание), пока
+    открыт тест (no‑activate, click‑through).
+  - Для каждого монитора: большое подвижное окно `MonitorTestPrompt` на ЭТОМ мониторе
+    с 5‑сек отсчётом «Сейчас данный монитор погаснет» → `PowerOffOne(i,mode)` (DDC
+    точечно, DPMS глобально) → 15‑сек отсчёт в темноте (на главной форме) → `Wake` →
+    диалог `MonitorTestResultDialog` с ДВУМЯ вопросами (уснул? проснулся?) + выбор
+    метода + «Повторить/Следующий». Пока не будет хорошо — меняем метод и повторяем.
+  - Итог — per‑monitor карта методов → `AppSettings.PerMonitorModes` (index→mode).
+    `MonitorPowerController.PowerOff(AppSettings)`/`Wake(AppSettings)`: DDC точечно
+    на каждый монитор + глобальный DPMS если хоть один Dpms/Auto/Both. Пустая карта =
+    старое поведение (глобальный `PowerOffMode`). `AppSettings.Equals` сравнивает карту
+    по содержимому (иначе record‑equality ломается о Dictionary).
+- UX настроек: исправлена вёрстка (комбо не наезжает на подпись), убрана дублирующая
+  кнопка «Тест», «Тест мониторов…»/«Проверить» слева, ОК/Отмена — справа снизу.
 - Headless `/install` (Program) ставит заставку из CLI + `initialized=true`,
   пишет `%LocalAppData%\Blackout ScreenSaver\install.log`.
 
@@ -127,7 +135,7 @@ DPMS (`SC_MONITORPOWER`) — глобальный запрос, NVIDIA/AMD пр�
 Сохранение языка: `AppSettings.Language` → `settings.json`
 
 ## Версионирование
-- Текущая: **1.9**
+- Текущая: **2.0**
 - Файл: `src/PowerOffScreensaver/PowerOffScreensaver.csproj` → `<Version>X.Y</Version>`
 - Автоотображение в заголовке окна настроек
 - Инкрементировать на 0.1 при каждом значимом изменении

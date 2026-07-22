@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.Runtime.InteropServices;
 
 namespace PowerOffScreensaver.Services;
@@ -47,6 +48,72 @@ public sealed class DdcCiService : IDdcCiService
         public IntPtr hPhysicalMonitor;
         [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 128)]
         public string szPhysicalMonitorDescription;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct RECT { public int left, top, right, bottom; }
+
+    /// <summary>
+    /// Enumerate physical monitors together with their screen rectangle, so the test
+    /// can place windows on the right monitor and number them. Index matches Probe()
+    /// / PowerOne().
+    /// </summary>
+    public IReadOnlyList<MonitorInfo> Inventory()
+    {
+        var result = new List<MonitorInfo>();
+        List<(IntPtr hmon, Rectangle bounds)> monitors;
+        try { monitors = EnumerateHMonitorsWithBounds(); }
+        catch { return result; }
+
+        int index = 0;
+        foreach (var (hmon, bounds) in monitors)
+        {
+            PHYSICAL_MONITOR[]? arr = null;
+            uint n = 0;
+            try
+            {
+                if (!GetNumberOfPhysicalMonitorsFromHMONITOR(hmon, out n) || n == 0)
+                    continue;
+                arr = new PHYSICAL_MONITOR[n];
+                if (!GetPhysicalMonitorsFromHMONITOR(hmon, n, arr)) { arr = null; continue; }
+
+                foreach (var pm in arr)
+                {
+                    bool supports;
+                    DdcPowerState state = DdcPowerState.Unknown;
+                    try
+                    {
+                        supports = GetVCPFeatureAndVCPFeatureReply(pm.hPhysicalMonitor, VCP_POWER, out _, out uint cur, out _);
+                        if (supports)
+                            state = cur switch { 1 => DdcPowerState.On, 2 or 3 or 4 or 5 => DdcPowerState.Off, _ => DdcPowerState.Other };
+                    }
+                    catch { supports = false; }
+
+                    result.Add(new MonitorInfo(index, Describe(pm.szPhysicalMonitorDescription, index + 1), bounds, supports, state));
+                    index++;
+                }
+            }
+            catch { }
+            finally
+            {
+                if (arr != null) { try { DestroyPhysicalMonitors(n, arr); } catch { } }
+            }
+        }
+        return result;
+    }
+
+    private List<(IntPtr, Rectangle)> EnumerateHMonitorsWithBounds()
+    {
+        var list = new List<(IntPtr, Rectangle)>();
+        MonitorEnumProc proc = (h, _, lprc, _) =>
+        {
+            var r = Marshal.PtrToStructure<RECT>(lprc);
+            list.Add((h, Rectangle.FromLTRB(r.left, r.top, r.right, r.bottom)));
+            return true;
+        };
+        EnumDisplayMonitors(IntPtr.Zero, IntPtr.Zero, proc, IntPtr.Zero);
+        GC.KeepAlive(proc);
+        return list;
     }
 
     public DdcResult PowerAll(bool on) => SetPower(on, onlyIndex: null);
@@ -175,6 +242,7 @@ public sealed class DdcCiService : IDdcCiService
 public sealed class NullDdcCiService : IDdcCiService
 {
     public IReadOnlyList<MonitorProbe> Probe() => Array.Empty<MonitorProbe>();
+    public IReadOnlyList<MonitorInfo> Inventory() => Array.Empty<MonitorInfo>();
     public MonitorProbe? ProbeOne(int index) => null;
     public DdcResult PowerAll(bool on) => new(0, 0);
     public DdcResult PowerOne(int index, bool on) => new(0, 0);
