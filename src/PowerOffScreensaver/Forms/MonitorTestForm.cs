@@ -15,47 +15,53 @@ namespace PowerOffScreensaver;
 /// powered off, a 15-second countdown runs while it is dark, it is woken, and the
 /// user answers two questions (did it sleep / wake correctly). On "no" the user can
 /// change the method for that monitor and retry until it works. Choices are saved
-/// per monitor.
+/// per monitor. The method to test with is chosen from the combo at the top.
 /// </summary>
 public sealed class MonitorTestForm : Form
 {
     private const int WarnSeconds = 5;
     private const int DarkSeconds = 15;
 
+    private static readonly PowerOffMode[] ModeOrder =
+        { PowerOffMode.Dpms, PowerOffMode.Auto, PowerOffMode.DdcCi, PowerOffMode.Both, PowerOffMode.None };
+
     private readonly MonitorPowerController _controller;
-    private readonly PowerOffMode _initialMode;
     private readonly Dictionary<int, PowerOffMode> _perMonitor = new();
     private readonly List<MonitorNumberOverlay> _overlays = new();
     private IReadOnlyList<MonitorInfo> _inventory = Array.Empty<MonitorInfo>();
 
+    private ComboBox _modeCombo = null!;
     private ListView _list = null!;
-    private Label _statusLabel = null!;
+    private Label _phaseLabel = null!;
+    private Label _countLabel = null!;
     private Button _startButton = null!;
     private Button _closeButton = null!;
     private bool _running;
 
-    /// <summary>Global method the user ended on (for the settings combo).</summary>
     public PowerOffMode SelectedMode { get; private set; }
-
-    /// <summary>Per-monitor result, or null if the wizard was not completed.</summary>
     public IReadOnlyDictionary<int, PowerOffMode>? PerMonitorResult { get; private set; }
 
     public MonitorTestForm(MonitorPowerController controller, PowerOffMode initialMode,
         IReadOnlyDictionary<int, PowerOffMode>? currentPerMonitor = null)
     {
         _controller = controller;
-        _initialMode = initialMode;
         SelectedMode = initialMode;
         if (currentPerMonitor != null)
             foreach (var kv in currentPerMonitor) _perMonitor[kv.Key] = kv.Value;
-        InitializeUI();
+        InitializeUI(initialMode);
     }
 
-    private void InitializeUI()
+    private PowerOffMode CurrentMode()
+    {
+        var i = _modeCombo.SelectedIndex;
+        return (i >= 0 && i < ModeOrder.Length) ? ModeOrder[i] : PowerOffMode.Dpms;
+    }
+
+    private void InitializeUI(PowerOffMode initialMode)
     {
         var s = Strings.Get();
         Text = s.TestTitle;
-        ClientSize = new Size(620, 462);
+        ClientSize = new Size(620, 452);
         StartPosition = FormStartPosition.CenterParent;
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MaximizeBox = false;
@@ -64,43 +70,70 @@ public sealed class MonitorTestForm : Form
         Controls.Add(new Label
         {
             Text = s.TestIntro,
-            Left = 20, Top = 14, Width = 580, Height = 34,
+            Left = 20, Top = 12, Width = 580, Height = 40,
             ForeColor = SystemColors.GrayText,
             Font = new Font(Font.FontFamily, 8.5f)
         });
 
+        // ── Method selector (choose what to test with) ───────────
+        Controls.Add(new Label
+        {
+            Text = s.PowerMethodLabel,
+            Left = 20, Top = 60, Width = 180, Height = 24,
+            TextAlign = ContentAlignment.MiddleLeft
+        });
+        _modeCombo = new ComboBox
+        {
+            Left = 206, Top = 57, Width = 300, DropDownStyle = ComboBoxStyle.DropDownList
+        };
+        _modeCombo.Items.AddRange(new object[] { s.ModeDpms, s.ModeAuto, s.ModeDdcCi, s.ModeBoth, s.ModeNone });
+        _modeCombo.SelectedIndex = Math.Max(0, Array.IndexOf(ModeOrder, initialMode));
+        _modeCombo.SelectedIndexChanged += (_, _) => SelectedMode = CurrentMode();
+        Controls.Add(_modeCombo);
+
+        // ── Monitor list ─────────────────────────────────────────
         _list = new ListView
         {
-            Left = 20, Top = 54, Width = 580, Height = 262,
+            Left = 20, Top = 94, Width = 580, Height = 186,
             View = View.Details, FullRowSelect = true, GridLines = true,
             HeaderStyle = ColumnHeaderStyle.Nonclickable
         };
         _list.Columns.Add("№", 44);
-        _list.Columns.Add(s.ColMonitor, 236);
-        _list.Columns.Add(s.ColDdc, 70);
-        _list.Columns.Add(s.PowerMethodLabel.TrimEnd(':', ' '), 110);
-        _list.Columns.Add(s.ColResult, 110);
+        _list.Columns.Add(s.ColMonitor, 206);
+        _list.Columns.Add(s.ColDdc, 64);
+        _list.Columns.Add(s.ColMethod, 130);
+        _list.Columns.Add(s.ColResult, 108);
         Controls.Add(_list);
 
-        _statusLabel = new Label
+        // ── Compact phase line + big countdown number ────────────
+        _phaseLabel = new Label
         {
-            Left = 20, Top = 324, Width = 580, Height = 40,
-            Font = new Font(Font.FontFamily, 11f, FontStyle.Bold),
+            Left = 20, Top = 286, Width = 580, Height = 20,
+            Font = new Font(Font.FontFamily, 9.5f),
+            AutoEllipsis = true,
             TextAlign = ContentAlignment.MiddleLeft
         };
-        Controls.Add(_statusLabel);
+        Controls.Add(_phaseLabel);
+
+        _countLabel = new Label
+        {
+            Left = 20, Top = 306, Width = 580, Height = 38,
+            Font = new Font(Font.FontFamily, 20f, FontStyle.Bold),
+            TextAlign = ContentAlignment.MiddleLeft
+        };
+        Controls.Add(_countLabel);
 
         Controls.Add(new Label
         {
             Text = s.TestHint,
-            Left = 20, Top = 368, Width = 580, Height = 34,
+            Left = 20, Top = 348, Width = 580, Height = 32,
             ForeColor = SystemColors.GrayText,
             Font = new Font(Font.FontFamily, 8.5f)
         });
 
         _startButton = new Button
         {
-            Text = s.TestRunBtn, Left = 20, Top = 412, Width = 240, Height = 34,
+            Text = s.TestRunBtn, Left = 20, Top = 396, Width = 240, Height = 34,
             UseVisualStyleBackColor = true
         };
         _startButton.Click += async (_, _) => await RunWizardAsync();
@@ -108,7 +141,7 @@ public sealed class MonitorTestForm : Form
 
         _closeButton = new Button
         {
-            Text = s.DiagClose, Left = 508, Top = 412, Width = 92, Height = 34,
+            Text = s.DiagClose, Left = 508, Top = 396, Width = 92, Height = 34,
             UseVisualStyleBackColor = true
         };
         _closeButton.Click += (_, _) => Close();
@@ -135,7 +168,7 @@ public sealed class MonitorTestForm : Form
             overlay.Show();
             _overlays.Add(overlay);
 
-            var mode = _perMonitor.TryGetValue(i, out var m) ? m : _initialMode;
+            var mode = _perMonitor.TryGetValue(i, out var m) ? m : CurrentMode();
             var item = new ListViewItem(number);
             item.SubItems.Add(info.Description);
             item.SubItems.Add(info.SupportsDdc ? "✓" : "—");
@@ -145,7 +178,8 @@ public sealed class MonitorTestForm : Form
             _list.Items.Add(item);
         }
 
-        _statusLabel.Text = _inventory.Count == 0 ? "—" : "";
+        _phaseLabel.Text = "";
+        _countLabel.Text = _inventory.Count == 0 ? "—" : "";
     }
 
     private async Task RunWizardAsync()
@@ -162,22 +196,21 @@ public sealed class MonitorTestForm : Form
                 var info = _inventory[i];
                 string number = (i + 1).ToString();
                 string header = string.Format(s.TestMonitorHeaderFmt, number, _inventory.Count);
-                var mode = _perMonitor.TryGetValue(i, out var m0) ? m0 : _initialMode;
+                var mode = _perMonitor.TryGetValue(i, out var m0) ? m0 : CurrentMode();
 
                 bool done = false;
                 while (!done)
                 {
                     HighlightRow(i);
 
-                    // 5-second warning ON the target monitor.
+                    // 5-second warning ON the target monitor + on this dialog.
                     using (var prompt = new MonitorTestPrompt(info.Bounds))
                     {
                         prompt.Show();
                         for (int c = WarnSeconds; c >= 1; c--)
                         {
                             prompt.SetPhase(header, s.TestMonitorCountdown, c.ToString(), Color.FromArgb(255, 170, 60));
-                            _statusLabel.Text = $"{header} — {s.TestMonitorCountdown}  {c}";
-                            _statusLabel.ForeColor = Color.FromArgb(180, 90, 0);
+                            ShowPhase($"{header} — {s.TestMonitorCountdown}", c.ToString(), Color.FromArgb(180, 90, 0));
                             await Task.Delay(1000);
                         }
                         prompt.Close();
@@ -187,15 +220,13 @@ public sealed class MonitorTestForm : Form
                     await Task.Run(() => _controller.PowerOffOne(i, mode));
                     for (int c = DarkSeconds; c >= 1; c--)
                     {
-                        _statusLabel.Text = $"{header} — {s.TestDarkMsg}  {c}";
-                        _statusLabel.ForeColor = SystemColors.GrayText;
+                        ShowPhase(header, string.Format(s.TestWakeInFmt, c), SystemColors.GrayText);
                         await Task.Delay(1000);
                     }
 
                     // Wake everything back, then ask about this monitor.
                     await Task.Run(() => _controller.Wake(mode));
-                    _statusLabel.Text = $"{header} — {s.TestWokeMsg}";
-                    _statusLabel.ForeColor = Color.FromArgb(0, 140, 60);
+                    ShowPhase(header, s.TestWokeMsg, Color.FromArgb(0, 140, 60));
 
                     using var dlg = new MonitorTestResultDialog(header, mode);
                     dlg.ShowDialog(this);
@@ -206,7 +237,6 @@ public sealed class MonitorTestForm : Form
                         continue;
                     }
 
-                    // Accept and move on.
                     mode = dlg.SelectedMode;
                     _perMonitor[i] = mode;
                     SetRow(i, dlg.SleptOk && dlg.WokeOk, mode, s);
@@ -215,16 +245,13 @@ public sealed class MonitorTestForm : Form
             }
 
             PerMonitorResult = new Dictionary<int, PowerOffMode>(_perMonitor);
-            // Global fallback = the most-used per-monitor mode (or unchanged).
             SelectedMode = MostCommonMode() ?? SelectedMode;
-            _statusLabel.Text = "✓";
-            _statusLabel.ForeColor = Color.FromArgb(0, 140, 60);
+            ShowPhase("", "✓", Color.FromArgb(0, 140, 60));
         }
         catch (Exception ex)
         {
-            _statusLabel.Text = ex.Message;
-            _statusLabel.ForeColor = Color.FromArgb(180, 30, 30);
-            try { await Task.Run(() => _controller.Wake(_initialMode)); } catch { }
+            ShowPhase("", ex.Message, Color.FromArgb(180, 30, 30));
+            try { await Task.Run(() => _controller.Wake(CurrentMode())); } catch { }
         }
         finally
         {
@@ -233,13 +260,20 @@ public sealed class MonitorTestForm : Form
         }
     }
 
+    private void ShowPhase(string phase, string big, Color bigColor)
+    {
+        _phaseLabel.Text = phase;
+        _countLabel.Text = big;
+        _countLabel.ForeColor = bigColor;
+    }
+
     private PowerOffMode? MostCommonMode()
     {
         if (_perMonitor.Count == 0) return null;
         var counts = new Dictionary<PowerOffMode, int>();
         foreach (var v in _perMonitor.Values)
             counts[v] = counts.TryGetValue(v, out var c) ? c + 1 : 1;
-        PowerOffMode best = _initialMode; int bestC = -1;
+        PowerOffMode best = CurrentMode(); int bestC = -1;
         foreach (var kv in counts)
             if (kv.Value > bestC) { best = kv.Key; bestC = kv.Value; }
         return best;
@@ -274,6 +308,7 @@ public sealed class MonitorTestForm : Form
     private void SetBusy(bool busy)
     {
         _startButton.Enabled = !busy;
+        _modeCombo.Enabled = !busy;
         _closeButton.Enabled = !busy;
     }
 

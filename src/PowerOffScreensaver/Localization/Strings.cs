@@ -57,7 +57,9 @@ public record LangStrings(
     string TestYes,
     string TestNo,
     string TestRetry,
-    string TestNext
+    string TestNext,
+    string ColMethod,
+    string TestWakeInFmt
 );
 
 public static class Strings
@@ -126,7 +128,9 @@ public static class Strings
                 "Did the monitor wake correctly (come back on)?",
                 "Yes", "No",
                 "Retry with this method",
-                "Next monitor"
+                "Next monitor",
+                "Method",
+                "Waking in {0} s"
             ),
             ["ru"] = new(
                 "🇷🇺", "Русский",
@@ -179,7 +183,9 @@ public static class Strings
                 "Монитор корректно вышел из сна (включился)?",
                 "Да", "Нет",
                 "Повторить с этим методом",
-                "Следующий монитор"
+                "Следующий монитор",
+                "Метод",
+                "Пробуждение через {0} с"
             ),
             ["de"] = new(
                 "🇩🇪", "Deutsch",
@@ -232,7 +238,9 @@ public static class Strings
                 "Ist der Monitor korrekt aufgewacht (wieder an)?",
                 "Ja", "Nein",
                 "Mit dieser Methode wiederholen",
-                "Nächster Monitor"
+                "Nächster Monitor",
+                "Methode",
+                "Aufwecken in {0} s"
             ),
             ["fr"] = new(
                 "🇫🇷", "Français",
@@ -285,7 +293,9 @@ public static class Strings
                 "Le moniteur s'est-il rallumé correctement ?",
                 "Oui", "Non",
                 "Réessayer avec cette méthode",
-                "Moniteur suivant"
+                "Moniteur suivant",
+                "Méthode",
+                "Réveil dans {0} s"
             ),
             ["es"] = new(
                 "🇪🇸", "Español",
@@ -338,7 +348,9 @@ public static class Strings
                 "¿El monitor se encendió correctamente?",
                 "Sí", "No",
                 "Reintentar con este método",
-                "Siguiente monitor"
+                "Siguiente monitor",
+                "Método",
+                "Encendiendo en {0} s"
             ),
             ["it"] = new(
                 "🇮🇹", "Italiano",
@@ -391,7 +403,9 @@ public static class Strings
                 "Il monitor si è riacceso correttamente?",
                 "Sì", "No",
                 "Riprova con questo metodo",
-                "Monitor successivo"
+                "Monitor successivo",
+                "Metodo",
+                "Riattivazione tra {0} s"
             ),
             ["pt"] = new(
                 "🇵🇹", "Português",
@@ -444,7 +458,9 @@ public static class Strings
                 "O monitor ligou de novo corretamente?",
                 "Sim", "Não",
                 "Repetir com este método",
-                "Próximo monitor"
+                "Próximo monitor",
+                "Método",
+                "Ligando em {0} s"
             ),
             ["pl"] = new(
                 "🇵🇱", "Polski",
@@ -497,7 +513,9 @@ public static class Strings
                 "Czy monitor poprawnie się wybudził (włączył)?",
                 "Tak", "Nie",
                 "Powtórz tą metodą",
-                "Następny monitor"
+                "Następny monitor",
+                "Metoda",
+                "Wybudzanie za {0} s"
             ),
             ["zh"] = new(
                 "🇨🇳", "中文",
@@ -550,7 +568,9 @@ public static class Strings
                 "显示器是否正确唤醒（重新亮起）？",
                 "是", "否",
                 "用此方法重试",
-                "下一台显示器"
+                "下一台显示器",
+                "方法",
+                "{0} 秒后唤醒"
             ),
         };
 }
