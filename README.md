@@ -157,6 +157,9 @@ The decision logic is covered by unit tests that never lock the build machine.
 **Second monitor stays on, or the screensaver only works on the primary display.**  
 This is the classic NVIDIA multi-monitor sleep bug. BOSS covers all `Screen.AllScreens` entries at once. If the backlight stays on despite the black window, try enabling DDC/CI in settings or turning off ShadowPlay and the NVIDIA LocalSystem Container service.
 
+**Monitors won't wake after the screensaver, or need Ctrl+Alt+Del.**  
+A panel turned off over DDC/CI won't come back from a mouse move on its own. BOSS wakes each monitor with a real input event, re-asserts the video signal, sends DDC/CI On, and verifies over DDC/CI readback that every panel is back before it locks, escalating to a display re-detect if needed. Each wake is logged to `%LocalAppData%\Blackout ScreenSaver\wake.log`. Use **Test monitors…** to confirm your panels wake (it shows how many came back); if one doesn't, switch the method to **DPMS** for that machine.
+
 **The screensaver doesn't appear in the list.**  
 Make sure `PowerOffScreensaver.scr` is in `C:\Windows\System32\`, then reopen the Screen Saver Settings dialog.
 
@@ -345,6 +348,9 @@ dotnet test
 
 **Второй монитор остаётся включённым, или хранитель работает только на основном экране.**  
 Это классический баг NVIDIA с мультимониторным сном. BOSS покрывает все `Screen.AllScreens` одновременно. Если подсветка остаётся, попробуйте включить DDC/CI в настройках или отключить ShadowPlay и сервис NVIDIA LocalSystem Container.
+
+**Мониторы не просыпаются после хранителя или требуют Ctrl+Alt+Del.**  
+Панель, выключенная по DDC/CI, сама от движения мыши не включается. BOSS будит каждый монитор реальным событием ввода, заново подаёт видеосигнал, шлёт DDC/CI On и по DDC-чтению проверяет, что каждый монитор вернулся в работу, — ещё до блокировки, с эскалацией через переустановку видеорежима при необходимости. Каждое пробуждение пишется в `%LocalAppData%\Blackout ScreenSaver\wake.log`. Кнопкой **Тест мониторов…** можно убедиться, что панели просыпаются (показывает, сколько вернулось); если какая-то не встаёт — выберите для этой машины метод **DPMS**.
 
 **Хранитель не появляется в списке Windows.**  
 Убедитесь, что `PowerOffScreensaver.scr` находится в `C:\Windows\System32\`, и переоткройте диалог «Параметры заставки».

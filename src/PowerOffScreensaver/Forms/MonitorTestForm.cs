@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using PowerOffScreensaver.Localization;
@@ -166,12 +167,17 @@ public sealed class MonitorTestForm : Form
                 await Task.Delay(1000);
             }
 
-            var after = await Task.Run(() => _controller.Probe());
-            await Task.Run(() => _controller.PowerOn());
+            // Read the off-state (did they actually go dark?), then wake and verify.
+            var afterOff = await Task.Run(() => _controller.Probe());
+            var wake = await Task.Run(() => _controller.WakeVerified());
 
-            FillResults(after, s);
-            _statusLabel.Text = "✓";
-            _statusLabel.ForeColor = Color.FromArgb(0, 140, 60);
+            FillResults(afterOff, s);
+
+            int awake = wake.Monitors.Count(m => !m.SupportsDdc || m.After == DdcPowerState.On);
+            _statusLabel.Text = $"{(wake.AllAwake ? "✓" : "⚠")}  {awake}/{wake.Monitors.Count}";
+            _statusLabel.ForeColor = wake.AllAwake
+                ? Color.FromArgb(0, 140, 60)
+                : Color.FromArgb(180, 90, 0);
         }
         catch (Exception ex)
         {
