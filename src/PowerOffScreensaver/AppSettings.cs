@@ -12,7 +12,10 @@ public enum PowerOffMode
     /// <summary>Global DPMS broadcast only (SC_MONITORPOWER). Safest wake — always recovers on input.</summary>
     Dpms = 2,
     /// <summary>Both DDC/CI per monitor and the DPMS broadcast.</summary>
-    Both = 3
+    Both = 3,
+    /// <summary>Black screen only — cover with black windows, never power the monitors
+    /// off. Avoids the DisplayPort hot-unplug churn/sounds some setups get on power-off.</summary>
+    None = 4
 }
 
 public record AppSettings

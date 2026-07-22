@@ -9,7 +9,8 @@ namespace PowerOffScreensaver;
 public static class PowerPlan
 {
     /// <summary>Whether DDC/CI per-monitor power-off should be attempted at all.</summary>
-    public static bool UsesDdc(PowerOffMode mode) => mode != PowerOffMode.Dpms;
+    public static bool UsesDdc(PowerOffMode mode) =>
+        mode is PowerOffMode.Auto or PowerOffMode.DdcCi or PowerOffMode.Both;
 
     /// <summary>
     /// Whether the global DPMS broadcast should also be sent. In Auto it is used
@@ -20,6 +21,8 @@ public static class PowerPlan
     {
         switch (mode)
         {
+            case PowerOffMode.None:
+                return false; // black windows only, never power off
             case PowerOffMode.Dpms:
             case PowerOffMode.Both:
                 return true;

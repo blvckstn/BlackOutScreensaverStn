@@ -18,7 +18,7 @@ namespace PowerOffScreensaver;
 public sealed class MonitorTestForm : Form
 {
     private static readonly PowerOffMode[] ModeOrder =
-        { PowerOffMode.Auto, PowerOffMode.DdcCi, PowerOffMode.Dpms, PowerOffMode.Both };
+        { PowerOffMode.Dpms, PowerOffMode.Auto, PowerOffMode.DdcCi, PowerOffMode.Both, PowerOffMode.None };
 
     private readonly MonitorPowerController _controller;
 
@@ -67,7 +67,7 @@ public sealed class MonitorTestForm : Form
             Left = 200, Top = 55, Width = 240,
             DropDownStyle = ComboBoxStyle.DropDownList
         };
-        _modeCombo.Items.AddRange(new object[] { s.ModeAuto, s.ModeDdcCi, s.ModeDpms, s.ModeBoth });
+        _modeCombo.Items.AddRange(new object[] { s.ModeDpms, s.ModeAuto, s.ModeDdcCi, s.ModeBoth, s.ModeNone });
         _modeCombo.SelectedIndex = Math.Max(0, Array.IndexOf(ModeOrder, initialMode));
         _modeCombo.SelectedIndexChanged += (_, _) =>
         {
@@ -178,6 +178,19 @@ public sealed class MonitorTestForm : Form
             _statusLabel.ForeColor = wake.AllAwake
                 ? Color.FromArgb(0, 140, 60)
                 : Color.FromArgb(180, 90, 0);
+
+            // Ask the user to confirm what they actually saw (DDC readback can't catch
+            // everything, e.g. DisplayPort re-connect quirks). "No" falls back to the
+            // safe black-only method.
+            var answer = MessageBox.Show(this, s.TestConfirmQuestion, s.TestTitle,
+                MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+            if (answer == DialogResult.No)
+            {
+                var noneIdx = Array.IndexOf(ModeOrder, PowerOffMode.None);
+                if (noneIdx >= 0) _modeCombo.SelectedIndex = noneIdx;
+                _statusLabel.Text = "⚠  " + s.ModeNone;
+                _statusLabel.ForeColor = Color.FromArgb(180, 90, 0);
+            }
         }
         catch (Exception ex)
         {

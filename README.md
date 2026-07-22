@@ -127,7 +127,7 @@ Open the settings dialog with `/c`. Every option has an inline tooltip in your c
 | Setting | Default | Description |
 |---|---|---|
 | Lock workstation on exit | On | Locks Windows when the screensaver exits, then confirms the lock took effect |
-| Monitor power-off method | DPMS | DPMS (default, always wakes), or Auto / DDC/CI / Both which use per-monitor DDC/CI Standby to also darken side monitors |
+| Monitor power-off method | DPMS | DPMS (default, always wakes); Auto / DDC/CI / Both use per-monitor DDC/CI Standby to also darken side monitors; **Black screen only** never powers off (just covers the screens) for setups where power-off misbehaves |
 | Power-off delay (ms) | 500 | Pause before sending the monitor power-off command |
 
 DPMS is the default because it always wakes on input. If DPMS leaves a side monitor lit, use **Test monitors…** to try Auto or DDC/CI: the test turns each screen off and back on so you can confirm your monitors both darken *and* wake before relying on it. If a monitor doesn't come back in the test, stay on DPMS for that machine.
@@ -156,6 +156,9 @@ The decision logic is covered by unit tests that never lock the build machine.
 
 **Second monitor stays on, or the screensaver only works on the primary display.**  
 This is the classic NVIDIA multi-monitor sleep bug. BOSS covers all `Screen.AllScreens` entries at once. If the backlight stays on despite the black window, try enabling DDC/CI in settings or turning off ShadowPlay and the NVIDIA LocalSystem Container service.
+
+**Device connect/disconnect sounds, or the desktop peeks through on the side monitors.**  
+This is DisplayPort hot-plug detection: when a DP monitor powers off, the link drops and Windows briefly treats it as unplugged (the chime), rearranges the desktop, then re-adds it. BOSS re-covers the monitors with black windows whenever the layout changes, so the desktop no longer shows through. To stop the sounds entirely, set the power-off method to **Black screen only** — it darkens the screens without a power-off, so DisplayPort links never drop.
 
 **Monitors won't wake after the screensaver, or need Ctrl+Alt+Del.**  
 A panel turned off over DDC/CI won't come back from a mouse move on its own. BOSS wakes each monitor with a real input event, re-asserts the video signal, sends DDC/CI On, and verifies over DDC/CI readback that every panel is back before it locks, escalating to a display re-detect if needed. Each wake is logged to `%LocalAppData%\Blackout ScreenSaver\wake.log`. Use **Test monitors…** to confirm your panels wake (it shows how many came back); if one doesn't, switch the method to **DPMS** for that machine.
@@ -319,7 +322,7 @@ dotnet test
 | Параметр | По умолчанию | Описание |
 |---|---|---|
 | Блокировать рабочую станцию при выходе | Вкл | Блокирует Windows при выходе из хранителя и подтверждает, что блокировка сработала |
-| Метод отключения мониторов | DPMS | DPMS (по умолчанию, всегда просыпается) либо Авто / DDC/CI / Оба — они гасят и боковые мониторы через по‑мониторный DDC/CI Standby |
+| Метод отключения мониторов | DPMS | DPMS (по умолчанию, всегда просыпается); Авто / DDC/CI / Оба гасят и боковые мониторы через по‑мониторный DDC/CI Standby; **Только чёрный экран** не выключает питание (просто перекрывает экраны) — для конфигураций, где выключение работает некорректно |
 | Задержка перед отключением (мс) | 500 | Пауза перед отправкой команды мониторам |
 
 DPMS стоит по умолчанию, потому что всегда просыпается от ввода. Если DPMS оставляет боковой монитор включённым, кнопкой **Тест мониторов…** попробуйте Авто или DDC/CI: тест гасит и снова включает каждый экран, чтобы вы убедились, что мониторы и гаснут, и просыпаются, прежде чем полагаться на этот режим. Если монитор в тесте не вернулся — оставьте для этой машины DPMS.
@@ -348,6 +351,9 @@ DPMS стоит по умолчанию, потому что всегда про
 
 **Второй монитор остаётся включённым, или хранитель работает только на основном экране.**  
 Это классический баг NVIDIA с мультимониторным сном. BOSS покрывает все `Screen.AllScreens` одновременно. Если подсветка остаётся, попробуйте включить DDC/CI в настройках или отключить ShadowPlay и сервис NVIDIA LocalSystem Container.
+
+**Звуки подключения/отключения устройств, или на боковых мониторах виден рабочий стол.**  
+Это Hot‑Plug Detect у DisplayPort: когда DP‑монитор выключается, линк падает и Windows на мгновение считает его отключённым (звук), перекладывает рабочий стол, затем подхватывает обратно. BOSS заново перекрывает мониторы чёрными окнами при любой смене раскладки, так что рабочий стол больше не проглядывает. Чтобы убрать звуки совсем, выберите метод **Только чёрный экран** — он затемняет экраны без выключения питания, и линки DisplayPort не рвутся.
 
 **Мониторы не просыпаются после хранителя или требуют Ctrl+Alt+Del.**  
 Панель, выключенная по DDC/CI, сама от движения мыши не включается. BOSS будит каждый монитор реальным событием ввода, заново подаёт видеосигнал, шлёт DDC/CI On и по DDC-чтению проверяет, что каждый монитор вернулся в работу, — ещё до блокировки, с эскалацией через переустановку видеорежима при необходимости. Каждое пробуждение пишется в `%LocalAppData%\Blackout ScreenSaver\wake.log`. Кнопкой **Тест мониторов…** можно убедиться, что панели просыпаются (показывает, сколько вернулось); если какая-то не встаёт — выберите для этой машины метод **DPMS**.
