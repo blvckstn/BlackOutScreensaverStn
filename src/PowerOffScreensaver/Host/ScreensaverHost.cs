@@ -80,9 +80,11 @@ public class ScreensaverHost : ApplicationContext
         // Stop receiving further input as we tear down.
         _inputHook.Dispose();
 
-        // Always restore the displays first — including any panel we forced off
-        // over DDC/CI — so the desktop / lock screen is actually visible.
-        _powerController.PowerOn();
+        // Bring every monitor back to a working state and CONFIRM it before we lock,
+        // so we never switch to the (invisible) secure desktop while a panel is still
+        // asleep. A DDC/CI-off panel won't wake from input on its own.
+        var wake = _powerController.WakeVerified();
+        Services.WakeLog.Write(wake);
 
         if (_settings.LockOnExit)
         {

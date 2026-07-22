@@ -46,7 +46,7 @@ public class SettingsForm : Form
     private static string AppVersion()
     {
         var ver = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version;
-        return ver != null ? $"v{ver.Major}.{ver.Minor}" : "v1.5";
+        return ver != null ? $"v{ver.Major}.{ver.Minor}" : "v1.6";
     }
 
     private void InitializeUI()

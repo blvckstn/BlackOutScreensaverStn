@@ -57,9 +57,13 @@ DPMS (`SC_MONITORPOWER`) — глобальный запрос, NVIDIA/AMD пр�
   монитор + DPMS для тех, кто DDC/CI не поддерживает. Чистая логика — `PowerPlan`.
 - `DdcCiService`: `EnumDisplayMonitors`→`GetPhysicalMonitorsFromHMONITOR`,
   `SetVCPFeature(0xD6, 4=off/1=on)`, `GetVCPFeatureAndVCPFeatureReply` для проверки.
-- Пробуждение ВСЕГДА включает каждый монитор (DDC/CI on + DPMS on): панель,
-  выключенная по DDC/CI, сама от ввода не включается. Плюс `ProcessExit`-хэндлер
-  восстанавливает мониторы при любом выходе.
+- Пробуждение (feature 005, `MonitorPowerController.WakeVerified` + `DisplaySignal`):
+  реальный ввод `SendInput(F15)` → `SetThreadExecutionState(ES_DISPLAY_REQUIRED)`
+  → DPMS ON → DDC/CI ON, затем ПРОВЕРКА по DDC-чтению (`WakePlan.AllAwake`), что
+  каждый монитор вернулся в On; повторы, на последней попытке эскалация
+  `ChangeDisplaySettingsEx` (переустановка видеорежима — как Ctrl+Alt+Del). Пробуждение
+  идёт ДО блокировки. Итог пишется в `wake.log` (`WakeLog`). Плюс `ProcessExit`-хэндлер
+  восстанавливает мониторы при любом выходе (одним проходом, без ожидания).
 - Тест в настройках (`MonitorTestForm`): выключает→ждёт→читает состояние по
   DDC/CI→включает, показывает per-monitor «погас/горит/неизвестно» + выбор метода.
 - Headless `/install` (Program) ставит заставку из CLI + `initialized=true`,
@@ -104,7 +108,7 @@ DPMS (`SC_MONITORPOWER`) — глобальный запрос, NVIDIA/AMD пр�
 Сохранение языка: `AppSettings.Language` → `settings.json`
 
 ## Версионирование
-- Текущая: **1.5**
+- Текущая: **1.6**
 - Файл: `src/PowerOffScreensaver/PowerOffScreensaver.csproj` → `<Version>X.Y</Version>`
 - Автоотображение в заголовке окна настроек
 - Инкрементировать на 0.1 при каждом значимом изменении
@@ -116,7 +120,7 @@ DPMS (`SC_MONITORPOWER`) — глобальный запрос, NVIDIA/AMD пр�
 4. Приватный бранч `private` — для AI снапшотов
 
 ## Тесты
-xUnit 2.9.2 на net10.0-windows, 153 теста, `dotnet test`
+xUnit 2.9.2 на net10.0-windows, 160 тестов, `dotnet test`
 
 ## Команды
 ```powershell
